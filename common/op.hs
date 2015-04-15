@@ -3,10 +3,14 @@ module Op (
   byCode,
   getMnemonic,
   getNbrArgs,
-  getArgsType,
+  getArgsTypes,
   getCode,
   getNbrCycles,
-  getComment
+  getComment,
+  register,
+  direct,
+  indirect,
+  label
 ) where
 
 -- import Data.Bits
@@ -54,8 +58,8 @@ getMnemonic = mnemonic
 getNbrArgs :: Op -> Int
 getNbrArgs = nbrArgs
 
-getArgsType :: Op -> [[Int]]
-getArgsType = argsType
+getArgsTypes :: Op -> [[Int]]
+getArgsTypes = argsType
 
 getCode :: Op -> Int
 getCode = code
