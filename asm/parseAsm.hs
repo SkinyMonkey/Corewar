@@ -10,6 +10,7 @@ import Utils
 import ParseBase
 import CheckArgs
 import CodeGeneration
+import ChampionData
 
 parseMetadata field cstring = (parseId $ tail field) && (parseString cstring)
 
@@ -33,20 +34,22 @@ parseInstruction tokens
   | (length tokens) > 0 = parseInstruction' tokens
   | (length tokens) == 0 = True
 
-worked index line True d = (True,d)
-worked index line False d =
-  error $ "Syntax error \"" ++ line ++ "\" (line " ++ (show $ index + 1) ++ ")"
+worked True cd = (True, cd)
+worked False cd =
+  error $ "Syntax error \""
+  ++ (getCurrentLine cd)
+  ++ "\" (line "
+  ++ (show $ (getLineNbr cd) + 1) ++ ")"
 
--- Execution will stop if anything is False
--- Now modify parseInstruction to take d to and use it
-parseLines' [line] index d = worked index line (parseInstruction $ words line) d
-parseLines' (lineHead:lineTail) index d =
+parseLines' [line] cd = worked (parseInstruction $ words line)(setCurrentLine cd line)
+
+parseLines' (lineHead:lineTail) cd =
   (headRes && tailRes, tailD)
-  where 
-    (headRes, headD) = worked index lineHead (parseInstruction $ words lineHead) d
-    (tailRes, tailD) = parseLines' lineTail (index + 1) headD
+  where (headRes, headD) = worked (parseInstruction $ words lineHead) uCd
+        (tailRes, tailD) = parseLines' lineTail (incLineNbr headD)
+        uCd = setCurrentLine cd lineHead
 
-parseLines lines = parseLines' lines 0 []
+parseLines lines = parseLines' lines (newChampionData (head lines))
 
 finished fileName (True, d) = putStrLn $ "Compilation complete for " ++ fileName
 finished fileName (False, d) = putStrLn $ "Compilation failed for " ++ fileName
