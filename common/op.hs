@@ -14,6 +14,7 @@ module Op (
 ) where
 
 -- import Data.Bits
+import Data.Word
 
 -- Internals definitions
 memSize = (8 * 1024 + 717)
@@ -47,7 +48,7 @@ data Op = Op {
   mnemonic :: String,
   nbrArgs :: Int,
   argsType :: [[Int]],
-  code :: Int,
+  code :: Word8,
   nbrCycles :: Int,
   comment :: String
 } deriving (Show)
@@ -61,7 +62,7 @@ getNbrArgs = nbrArgs
 getArgsTypes :: Op -> [[Int]]
 getArgsTypes = argsType
 
-getCode :: Op -> Int
+getCode :: Op -> Word8
 getCode = code
 
 getNbrCycles :: Op -> Int
