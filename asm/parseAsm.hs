@@ -47,6 +47,9 @@ parseLine' lines index
 parseLine lines =
   parseLine' lines 0
 
+finished True fileName = putStrLn $ "Compilation complete for " ++ fileName
+finished False fileName = putStrLn $ "Compilation failed for " ++ fileName
+
 generateChampion fileName = do
   championFile <- openFile fileName ReadMode
   content <- hGetContents championFile
