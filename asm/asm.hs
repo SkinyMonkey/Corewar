@@ -2,6 +2,8 @@ import System.IO
 import System.Environment (getArgs)
 import Data.List
 
+import Data.Bits
+
 import Op
 import Utils
 import ParseBase
@@ -28,12 +30,42 @@ parseInstruction tokens
 worked index line True = putStr ""
 worked index line False = putStrLn $ "Syntax error \"" ++ line ++ "\" (line " ++ (show $ index + 1) ++ ")"
 
-generateInstruction tokens = putStr ""
+-- FIXME : add encoding based on arg type
+encodeDescription (p1:p2:p3:p4:[]) = "p4"
+encodeDescription (p1:p2:p3:[]) = "p3"
+encodeDescription (p1:p2:[]) = "p2"
+encodeDescription (p1:[]) = "p1"
+encodeDescription [] = "no p"
+
+generateMetadata token args = putStrLn $ "Field : " ++ token ++ " Value : " ++ args
+
+generateLabel token args = putStr ""
+
+generateOp token args = putStrLn $ token
+                        ++ " "
+                        ++ show args
+                        ++ " "
+                        ++ encodeDescription (wordsWhen (==',') $ head args)
+--  | token == "live" || token == "zjmp" || token == "fork" || token == "lfork"
+--    = putStrLn $ token ++ " " ++ (show $ getCode op)
+--  | otherwise = putStrLn $ token ++ " " ++ encodeDescription args
+  where op = byMnemonic token
+
+generateInstruction [] = putStr ""
+generateInstruction (token:args)
+  | head token == '#' = putStr ""
+  | head token == '.' = generateMetadata token $ intercalate "" args
+  | last token == ':' = do
+--      generateLabel token -- FIXME : needed?
+      if length(args) > 0
+      then generateOp (head args) (tail args)
+      else putStr ""
+  | otherwise = generateOp token args
 
 generateCode' lines index
   | index < length(lines) = do
       let line = lines !! index in
-        generateInstruction $ words line
+        generateInstruction (words line)
       generateCode' lines (index + 1)
   | index == length(lines) = do
       putStrLn "Code generated"
@@ -42,17 +74,17 @@ generateCode lines = do
       generateCode' lines 0
 
 -- FIXME : redefine with guards checking for empty list and use tail
-parseLine' lines index res
+parseLine' lines index
   | index < length(lines) = do
       let line = lines !! index in
         worked index line $ parseInstruction $ words line
-      parseLine' lines (index + 1) res
+      parseLine' lines (index + 1)
   | index == length(lines) = do
       putStrLn "Syntax OK"
-      generateCode lines res
+      generateCode lines
 
 parseLine lines =
-  parseLine' lines 0 []
+  parseLine' lines 0
 
 parseChampion fileName = do
   championFile <- openFile fileName ReadMode
