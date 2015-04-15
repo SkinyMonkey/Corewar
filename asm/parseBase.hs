@@ -17,5 +17,3 @@ parseNum candidate
   | otherwise = length(filter (not . numChar) candidate) == 0
 
 parseId candidate = length(filter ( not . identifierChar) candidate) == 0
-
-

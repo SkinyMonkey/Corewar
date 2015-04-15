@@ -28,16 +28,31 @@ parseInstruction tokens
 worked index line True = putStr ""
 worked index line False = putStrLn $ "Syntax error \"" ++ line ++ "\" (line " ++ (show $ index + 1) ++ ")"
 
+generateInstruction tokens = putStr ""
+
+generateCode' lines index
+  | index < length(lines) = do
+      let line = lines !! index in
+        generateInstruction $ words line
+      generateCode' lines (index + 1)
+  | index == length(lines) = do
+      putStrLn "Code generated"
+
+generateCode lines = do
+      generateCode' lines 0
+
 -- FIXME : redefine with guards checking for empty list and use tail
-parseLine' lines index
+parseLine' lines index res
   | index < length(lines) = do
       let line = lines !! index in
         worked index line $ parseInstruction $ words line
-      parseLine' lines (index + 1)
-  | index == length(lines) = putStrLn "Syntax OK"
+      parseLine' lines (index + 1) res
+  | index == length(lines) = do
+      putStrLn "Syntax OK"
+      generateCode lines res
 
 parseLine lines =
-  parseLine' lines 0
+  parseLine' lines 0 []
 
 parseChampion fileName = do
   championFile <- openFile fileName ReadMode
