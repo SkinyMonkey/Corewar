@@ -1,4 +1,4 @@
-SUBDIRS = asm vm
+SUBDIRS = asm # vm
 
 all: $(SUBDIRS)
 
@@ -7,7 +7,7 @@ $(SUBDIRS):
 
 clean:
 	$(MAKE) clean -C asm;
-	$(MAKE) clean -C vm;
+#	$(MAKE) clean -C vm;
 
 fclean:	clean
 	rm -rf bin/*

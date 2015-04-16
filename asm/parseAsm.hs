@@ -36,11 +36,14 @@ parseInstruction' [] cd = (True, cd)
 parseInstruction' (token:args) cd
   | head token == '#' = (True, cd)
   | head token == '.' = parseMetadata token (intercalate "" args) cd
--- FIXME : not correct
-  | last token == ':' = (fst (parseLabel token cd)
-    && ((length(args) > 0 && (fst (parseOp (head args) (tail args) cd))) || True), cd)
+  | last token == ':' = (headRes && tailRes, tailCd)
   | otherwise = parseOp token args cd
-
+    where (headRes, headCd) = parseLabel token cd
+          (tailRes, tailCd) =
+            if (length(args) > 0)
+            then parseOp (head args) (tail args) headCd
+            else (True, headCd)
+ 
 parseInstruction tokens cd
   | (length tokens) > 0 = parseInstruction' (words tokens) uCd
   | (length tokens) == 0 = (True, uCd)
@@ -56,9 +59,9 @@ worked (False, cd) =
 
 parseLines' [line] cd = worked (parseInstruction line cd)
 parseLines' (lineHead:lineTail) cd =
-  (headRes && tailRes, tailD)
-  where (headRes, headD) = worked (parseInstruction lineHead cd)
-        (tailRes, tailD) = parseLines' lineTail (incLineNbr headD)
+  (headRes && tailRes, tailCd)
+  where (headRes, headCd) = worked (parseInstruction lineHead cd)
+        (tailRes, tailCd) = parseLines' lineTail (incLineNbr headCd)
 parseLines' [] cd = (False, cd)
 
 parseLines lines cd = parseLines' lines $ setCurrentLine cd (head lines)
