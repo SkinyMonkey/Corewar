@@ -23,6 +23,8 @@ parseOp candidate args
   | length(args) > 0 = parseOp' candidate (wordsWhen (==',') $ head args)
   | length(args) == 0 = error "No argument given"
 
+-- FIXME : here is next
+parseInstruction' [] = True
 parseInstruction' (token:args)
   | head token == '#' = True
   | head token == '.' = parseMetadata token $ intercalate "" args
@@ -30,7 +32,6 @@ parseInstruction' (token:args)
     && ((length(args) > 0 && (parseOp (head args) (tail args))) || True)
   | otherwise = parseOp token args
 
--- FIXME : here is next
 parseInstruction tokens cd
   | (length tokens) > 0 = (parseInstruction' (words tokens), cd)
   | (length tokens) == 0 = (True, cd)
