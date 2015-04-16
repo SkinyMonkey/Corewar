@@ -32,7 +32,7 @@ parseInstruction' (token:args)
 
 -- FIXME : here is next
 parseInstruction tokens cd
-  | (length tokens) > 0 = (parseInstruction' tokens, cd)
+  | (length tokens) > 0 = (parseInstruction' (words tokens), cd)
   | (length tokens) == 0 = (True, cd)
   where uCd = setCurrentLine cd tokens
 
@@ -43,10 +43,10 @@ worked (False, cd) =
   ++ "\" (line "
   ++ (show $ (getLineNbr cd) + 1) ++ ")"
 
-parseLines' [line] cd = worked (parseInstruction (words line) cd)
+parseLines' [line] cd = worked (parseInstruction line cd)
 parseLines' (lineHead:lineTail) cd =
   (headRes && tailRes, tailD)
-  where (headRes, headD) = worked (parseInstruction (words lineHead) cd)
+  where (headRes, headD) = worked (parseInstruction lineHead cd)
         (tailRes, tailD) = parseLines' lineTail (incLineNbr headD)
 
 parseLines lines cd = parseLines' lines $ setCurrentLine cd (head lines)
