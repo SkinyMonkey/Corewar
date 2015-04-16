@@ -30,6 +30,7 @@ parseInstruction' (token:args)
     && ((length(args) > 0 && (parseOp (head args) (tail args))) || True)
   | otherwise = parseOp token args
 
+-- FIXME : here is next
 parseInstruction tokens
   | (length tokens) > 0 = parseInstruction' tokens
   | (length tokens) == 0 = True
@@ -42,14 +43,13 @@ worked False cd =
   ++ (show $ (getLineNbr cd) + 1) ++ ")"
 
 parseLines' [line] cd = worked (parseInstruction $ words line)(setCurrentLine cd line)
-
 parseLines' (lineHead:lineTail) cd =
   (headRes && tailRes, tailD)
   where (headRes, headD) = worked (parseInstruction $ words lineHead) uCd
         (tailRes, tailD) = parseLines' lineTail (incLineNbr headD)
         uCd = setCurrentLine cd lineHead
 
-parseLines lines = parseLines' lines (newChampionData (head lines))
+parseLines lines cd = parseLines' lines $ setCurrentLine cd (head lines)
 
 finished fileName (True, d) = putStrLn $ "Compilation complete for " ++ fileName
 finished fileName (False, d) = putStrLn $ "Compilation failed for " ++ fileName
@@ -57,6 +57,9 @@ finished fileName (False, d) = putStrLn $ "Compilation failed for " ++ fileName
 generateChampion fileName = do
   championFile <- openFile fileName ReadMode
   content <- hGetContents championFile
-  finished fileName $ parseLines $ lines content
-  generateCode $ lines content
+  let cd = newChampionData in
+    finished fileName $ parseLines (lines content) cd
+
+-- FIXME : change generateCode to act on cd not lines
+--  generateCode $ lines content
   hClose championFile

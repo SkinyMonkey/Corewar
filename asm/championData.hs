@@ -26,4 +26,4 @@ data ChampionData = ChampionData {
 --  args :: [(Int, Int)]
 --}
 
-newChampionData line = ChampionData 0 line-- []
+newChampionData = ChampionData 0 ""
