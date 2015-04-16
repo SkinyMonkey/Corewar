@@ -32,9 +32,16 @@ _nameCmdString = ".name"
 _commentCmdString = ".comment"
 
 -- Enum mask/flag for args types
+register :: Int
 register = 0x01
+
+direct :: Int
 direct = 0x02
+
+indirect :: Int
 indirect = 0x04
+
+label :: Int
 label = 0x08
 
 -- Size for memory access

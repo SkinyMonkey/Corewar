@@ -11,6 +11,8 @@ module ChampionData (
 ) where
 
 import Header
+import Op
+import Data.Word
 
 getFileName :: ChampionData -> String
 getFileName self = fileName self
@@ -33,7 +35,8 @@ addLabel self label = self {labelFound = label:labels}
 
 -- FIXME : add instruction to list
 --          instruction = (type, value)
-addInstruction self op args = self {instructions = 1:(instructions self)}
+addInstruction self op args = self {instructions = instruction:(instructions self)}
+  where instruction = (getCode op, args)
 
 addMetadata :: ChampionData -> String -> String -> ChampionData
 addMetadata self "name" value = self {header = (setProgName (header self) value)}
@@ -48,7 +51,7 @@ data ChampionData = ChampionData {
   currentLine :: String,
   labelFound :: [String],
   header :: Header,
-  instructions :: [Int]
+  instructions :: [(Word8,[(Int, String)])]
 --  labelCalled :: [],
 }
 

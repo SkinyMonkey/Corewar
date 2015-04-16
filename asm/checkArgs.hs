@@ -6,11 +6,12 @@ module CheckArgs (
 import Op
 import ParseBase
 
--- FIXME : add type and content to types list
-addIndirect self value = self
-addRegister self value = self
-addLabelCall self value = self
-addDirect self = self
+addRegister self value = (register, value):self
+addIndirect self value = (indirect, value):self
+addLabelCall self value = (label, value):self
+
+addDirect self = (direct, snd lastPair):(init self)
+  where lastPair = last self
 
 isRegister candidate types = (headRes && tailRes, addRegister types value)
   where headRes = (head candidate == 'r')
@@ -20,7 +21,6 @@ isDirect candidate types = (headRes && tailRes, addDirect tailTypes)
   where headRes = head candidate == '%'
         (tailRes, tailTypes) = isIndirect (tail candidate) types
 
--- lancer isLabel, si faux alors lancer parseNum candidate
 isIndirect candidate types =
   if (headRes)
   then (headRes, headTypes)
