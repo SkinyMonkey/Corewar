@@ -6,7 +6,6 @@ module ParseBase (
 
 import Data.Char
 
-
 parseString :: [Char] -> Bool
 parseString token = (head token == '"') && (last token == '"')
 
@@ -16,10 +15,12 @@ identifierChar c = (((ord(c) >= ord('a')) && (ord(c) <= ord('z'))) || c == '_') 
 numChar :: Char -> Bool
 numChar c = ((ord(c) >= ord('0')) && (ord(c) <= ord('9')))
 
-parseNum :: [Char] -> Bool
+parseNum :: [Char] -> (Bool, [Char])
 parseNum candidate
-  | head candidate == '-' = length(filter (not . numChar) $ tail candidate) == 0
-  | otherwise = length(filter (not . numChar) candidate) == 0
+  | head candidate == '-' =
+    (length(filter (not . numChar) $ tail candidate) == 0, candidate)
+  | otherwise =
+    (length(filter (not . numChar) candidate) == 0, candidate)
 
-parseId :: [Char] -> Bool
-parseId candidate = length(filter ( not . identifierChar) candidate) == 0
+parseId :: [Char] -> (Bool, [Char])
+parseId candidate = (length(filter ( not . identifierChar) candidate) == 0, candidate)

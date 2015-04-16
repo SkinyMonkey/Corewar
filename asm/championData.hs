@@ -31,15 +31,14 @@ incLineNbr self = self {lineNbr = nbr + 1}
 addLabel self label = self {labelFound = label:labels}
   where labels = labelFound self
 
--- FIXME : finish
-addInstruction self op = self -- {instructions = 1:instructions}
---  where instructions = instructions self
+-- FIXME : add instruction to list
+--          instruction = (type, value)
+addInstruction self op args = self {instructions = ():(instructions self)}
 
 addMetadata :: ChampionData -> String -> String -> ChampionData
 addMetadata self "name" value = self {header = (setProgName (header self) value)}
 
---addMetadata self "comment" value = self {header = header}
---  where header = (setComment (header self) value)
+addMetadata self "comment" value = self {header = (setComment (header self) value)}
 
 addMetadata self _ _ = self
 
@@ -49,7 +48,7 @@ data ChampionData = ChampionData {
   currentLine :: String,
   labelFound :: [String],
   header :: Header,
-  instructions :: [Int]
+  instructions :: [(Int,[(Int, String)])]
 --  labelCalled :: [],
 }
 

@@ -12,20 +12,21 @@ import CheckArgs
 import ChampionData
 
 parseMetadata field cstring cd =
-  if (parseId $ tail field) && (parseString cstring)
+  if (fst $ parseId $ tail field) && (parseString cstring)
   then (True, addMetadata cd field cstring)
   else (False, cd)
 
 parseLabel candidate cd =
-  if (parseId $ take (length(candidate) - 1) candidate)
+  if (fst $ parseId $ take (length(candidate) - 1) candidate)
   then (True, addLabel cd candidate)
   else (False, cd)
 
 parseOp' candidate args cd =
-  if (rightArgsNbr op args && rightTypes op args)
-  then (True, addInstruction cd op)
+  if (rightArgsNbr op args && validTypes)
+  then (True, addInstruction cd op argTypes)
   else (False, cd)
   where op = byMnemonic candidate
+        (validTypes, argTypes) = retrieveTypes op args
 
 parseOp candidate args cd
   | length(args) > 0 = parseOp' candidate (wordsWhen (==',') $ head args) cd
