@@ -17,20 +17,26 @@ SRCS =	asm.hs\
 				parseAsm.hs\
 				parseBase.hs
 
+FLAGS = -O -XHaskell2010 -W
+
 all: $(NAME)
 
 test:
 	@echo "FIXME : NOT IMPLEMENTED"
 
 $(NAME): $(COMMON_SRCS) $(SRCS)
-	"$(GHC)" -i../common:. -outputdir $(INTERMEDIATE_DIR) -O -XHaskell2010 --make $@
+	"$(GHC)" -i../common:. -outputdir $(INTERMEDIATE_DIR) $(FLAGS) $@
 	mv $(NAME) $(BIN_DIR)
+
+debug:
+	@echo "HELP : To debug an exception use :args to set the program argument and :back\n"
+	ghci $(COMMON_SRCS) $(SRCS)
 
 clean:
 	rm -f $(INTERMEDIATE_DIR)/*.o
 	rm -f $(INTERMEDIATE_DIR)/*.hi
 
-fclean:
+fclean: clean
 	rm -f $(BIN_DIR)/$(NAME)
 
 re: fclean all

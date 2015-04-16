@@ -9,33 +9,43 @@ import Op
 import Utils
 import ParseBase
 import CheckArgs
-import CodeGeneration
 import ChampionData
 
-parseMetadata field cstring = (parseId $ tail field) && (parseString cstring)
+parseMetadata field cstring cd =
+  if (parseId $ tail field) && (parseString cstring)
+  then (True, addMetadata cd field cstring)
+  else (False, cd)
 
-parseLabel candidate =  parseId $ take (length(candidate) - 1) candidate
+parseLabel candidate cd =
+  if (parseId $ take (length(candidate) - 1) candidate)
+  then (True, addLabel cd candidate)
+  else (False, cd)
 
-parseOp' candidate args = rightArgsNbr op args && rightTypes op args
+parseOp' candidate args cd =
+  if (rightArgsNbr op args && rightTypes op args)
+  then (True, addInstruction cd op)
+  else (False, cd)
   where op = byMnemonic candidate
 
-parseOp candidate args
-  | length(args) > 0 = parseOp' candidate (wordsWhen (==',') $ head args)
+parseOp candidate args cd
+  | length(args) > 0 = parseOp' candidate (wordsWhen (==',') $ head args) cd
   | length(args) == 0 = error "No argument given"
+parseOp _ _ cd = (False, cd)
 
--- FIXME : here is next
-parseInstruction' [] = True
-parseInstruction' (token:args)
-  | head token == '#' = True
-  | head token == '.' = parseMetadata token $ intercalate "" args
-  | last token == ':' = parseLabel token
-    && ((length(args) > 0 && (parseOp (head args) (tail args))) || True)
-  | otherwise = parseOp token args
+parseInstruction' [] cd = (True, cd)
+parseInstruction' (token:args) cd
+  | head token == '#' = (True, cd)
+  | head token == '.' = parseMetadata token (intercalate "" args) cd
+-- FIXME : not correct
+  | last token == ':' = (fst (parseLabel token cd)
+    && ((length(args) > 0 && (fst (parseOp (head args) (tail args) cd))) || True), cd)
+  | otherwise = parseOp token args cd
 
 parseInstruction tokens cd
-  | (length tokens) > 0 = (parseInstruction' (words tokens), cd)
-  | (length tokens) == 0 = (True, cd)
+  | (length tokens) > 0 = parseInstruction' (words tokens) uCd
+  | (length tokens) == 0 = (True, uCd)
   where uCd = setCurrentLine cd tokens
+parseInstruction _ cd = (False, cd)
 
 worked (True, cd) = (True, cd)
 worked (False, cd) =
@@ -49,17 +59,18 @@ parseLines' (lineHead:lineTail) cd =
   (headRes && tailRes, tailD)
   where (headRes, headD) = worked (parseInstruction lineHead cd)
         (tailRes, tailD) = parseLines' lineTail (incLineNbr headD)
+parseLines' [] cd = (False, cd)
 
 parseLines lines cd = parseLines' lines $ setCurrentLine cd (head lines)
 
-finished fileName (True, cd) = putStrLn $ "Compilation complete for " ++ fileName
-finished fileName (False, cd) = putStrLn $ "Compilation failed for " ++ fileName
+finished (True, cd) = putStrLn $ "Compilation complete for " ++ getFileName cd
+finished (False, cd) = putStrLn $ "Compilation failed for " ++ getFileName cd
 
 generateChampion fileName = do
   championFile <- openFile fileName ReadMode
   content <- hGetContents championFile
-  let cd = newChampionData in
-    finished fileName $ parseLines (lines content) cd
+  let cd = newChampionData fileName in
+    finished $ parseLines (lines content) cd
 
 -- FIXME : change generateCode to act on cd not lines
 --  generateCode $ lines content

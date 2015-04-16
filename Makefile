@@ -9,7 +9,7 @@ clean:
 	$(MAKE) clean -C asm;
 	$(MAKE) clean -C vm;
 
-fclean: clean
+fclean:	clean
 	rm -rf bin/*
 
 re: fclean all

@@ -17,19 +17,19 @@ module Op (
 import Data.Word
 
 -- Internals definitions
-memSize = (8 * 1024 + 717)
-idxMod =	512
-maxArgsNumber	=	4
-regNumber = 16
+_memSize = (8 * 1024 + 717)
+_idxMod =	512
+_maxArgsNumber	=	4
+_regNumber = 16
 
 -- Asm syntax
-commentChar = '#'
-labelChar = ':'
-directChar = '%'
-separatorChar = ','
-labelChars = "abcdefghijklmnopqrstuvwxyz_0123456789"
-nameCmdString = ".name"
-commentCmdString = ".comment"
+_commentChar = '#'
+_labelChar = ':'
+_directChar = '%'
+_separatorChar = ','
+_labelChars = "abcdefghijklmnopqrstuvwxyz_0123456789"
+_nameCmdString = ".name"
+_commentCmdString = ".comment"
 
 -- Enum mask/flag for args types
 register = 0x01
@@ -38,9 +38,9 @@ indirect = 0x04
 label = 0x08
 
 -- Size for memory access
-indSize = 2
-regSize = 4
-dirSize = regSize
+_indSize = 2
+_regSize = 4
+_dirSize = _regSize
 
 -- Param octet codage 
 
@@ -71,6 +71,7 @@ getNbrCycles = nbrCycles
 getComment :: Op -> String
 getComment = comment
 
+byMnemonic :: String -> Op
 byMnemonic "live" = Op "live"	1	[[direct]]	1	10	"alive"		
 byMnemonic "ld" = Op "ld"	2	[[direct, indirect], [register]]	2	5	"load"		
 byMnemonic "st" =  Op "st"	2	[[register], [indirect, register]]	3	5	"store"		
@@ -110,11 +111,13 @@ byMnemonic mnemonic = error $ "Unknown mnemonic found : " ++ mnemonic
 
 opsNames = ["live", "ld", "st", "add", "sub", "and", "or", "xor", "zjmp", "ldi", "sti", "fork", "lld", "lldi", "lfork", "aff"]
 
+opsbyCode :: [Op]
 opsbyCode = [byMnemonic name | name <- opsNames]
 
+byCode :: Int -> Op
 byCode index = opsbyCode !! index
 
 -- Defines for cycle informations ...
-cycleToDie = 1536
-cycleDelta = 5
-nbrLive = 40
+_cycleToDie = 1536
+_cycleDelta = 5
+_nbrLive = 40

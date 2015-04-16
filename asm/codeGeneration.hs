@@ -7,7 +7,6 @@ import qualified Data.ByteString as B
 import Data.Binary.Put
 import Data.List
 
-import Utils
 import Op
 import Header
 
@@ -75,6 +74,7 @@ generateCode' lines index
       generateCode' lines (index + 1)
   | index == length(lines) = do
       putStrLn "Code generated"
+generateCode' _ _ = putStrLn "Error"
 
 generateCode lines = do
       generateCode' lines 0
