@@ -33,7 +33,7 @@ addLabel self label = self {labelFound = label:labels}
 
 -- FIXME : add instruction to list
 --          instruction = (type, value)
-addInstruction self op args = self {instructions = ():(instructions self)}
+addInstruction self op args = self {instructions = 1:(instructions self)}
 
 addMetadata :: ChampionData -> String -> String -> ChampionData
 addMetadata self "name" value = self {header = (setProgName (header self) value)}
@@ -48,7 +48,7 @@ data ChampionData = ChampionData {
   currentLine :: String,
   labelFound :: [String],
   header :: Header,
-  instructions :: [(Int,[(Int, String)])]
+  instructions :: [Int]
 --  labelCalled :: [],
 }
 
