@@ -5,15 +5,20 @@ module ChampionData (
   addInstruction,
   incLineNbr,
   setCurrentLine,
+  getHeader,
   getFileName,
   getLineNbr,
   getCurrentLine,
+  getInstructions,
   ChampionData
 ) where
 
 import Header
 import Op
 import Data.Word
+
+getHeader :: ChampionData -> Header
+getHeader self = header self
 
 getFileName :: ChampionData -> String
 getFileName self = fileName self
@@ -23,6 +28,8 @@ getLineNbr self = lineNbr self
 
 getCurrentLine :: ChampionData -> String
 getCurrentLine self = currentLine self
+
+getInstructions self = instructions self
 
 setCurrentLine :: ChampionData -> String -> ChampionData
 setCurrentLine self line = self {currentLine = line}
@@ -43,7 +50,7 @@ addMetadata self "name" value = self {header = (setProgName (header self) value)
 
 addMetadata self "comment" value = self {header = (setComment (header self) value)}
 
-addMetadata self _ _ = self
+addMetadata self field value = self
 
 data ChampionData = ChampionData {
   fileName :: String,

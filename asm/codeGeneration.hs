@@ -2,6 +2,7 @@ module CodeGeneration (
   generateCode
 ) where
 
+import Header
 import ChampionData
 
 --serializeDirect value = do
@@ -40,5 +41,8 @@ generateInstructions cd = (True, cd)
 finished (True, cd) = putStrLn $ "Generation complete for " ++ getFileName cd
 finished (False, cd) = putStrLn $ "Generation failed for " ++ getFileName cd
 
-generateCode cd =
+generateCode cd = do
+  generateHeader header fileName
   finished $ generateInstructions cd
+  where header = getHeader cd
+        fileName = getFileName cd

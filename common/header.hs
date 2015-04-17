@@ -28,26 +28,14 @@ progNameLength = 128
 commentLength ::Int
 commentLength = 2048
 
--- FIXME : modify following code to apply on Header record
 rightPaddedString :: Int -> [Char] -> [Char]
 rightPaddedString size string =
   string ++ [chr(0) | c <- [1..size - length(string)]]
 
-serializeHeader :: [Char] -> [Char] -> GHC.Word.Word32 -> PutM ()
-serializeHeader name comment progSize = do
-  putByteString $ B.pack $ rightPaddedString magicLen corewarExecMagic
-  putByteString $ B.pack $ rightPaddedString progNameLength name
-  putWord32be progSize
-  putByteString $ B.pack $ rightPaddedString commentLength comment
-
-generateHeader :: [Char] -> [Char] -> GHC.Word.Word32 -> IO ()
-generateHeader name comment progSize =B.writeFile "tests/res.cor"
-  $ B.concat $ BL.toChunks $ runPut (serializeHeader name comment progSize)
-
 data Header = Header {
   magic :: B.ByteString,
   progName :: String,
-  progSize :: Int,
+  progSize :: Word32,
   comment :: String
 }	deriving (Show)
 
@@ -62,3 +50,14 @@ newHeader = Header
   ""
   0
   ""
+
+serializeHeader :: Header -> PutM ()
+serializeHeader header = do
+  putByteString $ magic header
+  putByteString $ B.pack $ rightPaddedString progNameLength (progName header)
+  putWord32be $ progSize header
+  putByteString $ B.pack $ rightPaddedString commentLength (comment header)
+
+generateHeader header fileName = B.writeFile
+  ((take (length(fileName) - 2) fileName) ++ ".cor")
+  (B.concat $ BL.toChunks $ runPut (serializeHeader header))

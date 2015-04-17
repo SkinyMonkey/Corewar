@@ -13,7 +13,7 @@ import ChampionData
 
 parseMetadata field cstring cd =
   if (fst $ parseId $ tail field) && (parseString cstring)
-  then (True, addMetadata cd field cstring)
+  then (True, addMetadata cd (tail field) cstring)
   else (False, cd)
 
 parseLabel candidate cd =
@@ -30,7 +30,8 @@ parseOp' candidate args cd =
 
 parseOp candidate args cd
   | length(args) > 0 = parseOp' candidate (wordsWhen (==',') $ head args) cd
-  | length(args) == 0 = error "No argument given"
+  | length(args) == 0 =
+    error $ "No argument given to " ++ candidate ++ " line " ++ (show $ getLineNbr cd)
 parseOp _ _ cd = (False, cd)
 
 parseInstruction' [] cd = (True, cd)
