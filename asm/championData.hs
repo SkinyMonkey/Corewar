@@ -7,7 +7,8 @@ module ChampionData (
   setCurrentLine,
   getFileName,
   getLineNbr,
-  getCurrentLine
+  getCurrentLine,
+  ChampionData
 ) where
 
 import Header
@@ -30,12 +31,11 @@ incLineNbr :: ChampionData -> ChampionData
 incLineNbr self = self {lineNbr = nbr + 1}
   where nbr = getLineNbr self
 
-addLabel self label = self {labelFound = label:labels}
+addLabel self label = self {labelFound = labels++[label]}
   where labels = labelFound self
 
--- FIXME : add instruction to list
---          instruction = (type, value)
-addInstruction self op args = self {instructions = instruction:(instructions self)}
+-- instruction = (code, [(argType, argValue)])
+addInstruction self op args = self {instructions = (instructions self)++[instruction]}
   where instruction = (getCode op, args)
 
 addMetadata :: ChampionData -> String -> String -> ChampionData
@@ -52,13 +52,7 @@ data ChampionData = ChampionData {
   labelFound :: [String],
   header :: Header,
   instructions :: [(Word8,[(Int, String)])]
---  labelCalled :: [],
 }
-
---data Instruction = Instruction {
---  code :: Word8,
---  args :: [(Int, Int)]
---}
 
 newChampionData :: String -> ChampionData
 newChampionData fileName = ChampionData fileName 0 "" [] newHeader []

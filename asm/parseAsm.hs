@@ -1,5 +1,5 @@
 module ParseAsm (
-  generateChampion
+  parseChampion
 ) where
 
 import System.IO
@@ -67,15 +67,14 @@ parseLines' [] cd = (False, cd)
 
 parseLines lines cd = parseLines' lines $ setCurrentLine cd (head lines)
 
-finished (True, cd) = putStrLn $ "Compilation complete for " ++ getFileName cd
-finished (False, cd) = putStrLn $ "Compilation failed for " ++ getFileName cd
+finished (True, cd) = do
+  putStrLn $ "Compilation complete for " ++ getFileName cd
+  return cd
+finished (False, cd) = error $ "Compilation failed for " ++ getFileName cd
 
-generateChampion fileName = do
+parseChampion fileName = do
   championFile <- openFile fileName ReadMode
   content <- hGetContents championFile
-  let cd = newChampionData fileName in
-    finished $ parseLines (lines content) cd
-
--- FIXME : change generateCode to act on cd not lines
---  generateCode $ lines content
+  res <- finished $ parseLines (lines content) (newChampionData fileName)
   hClose championFile
+  return res
