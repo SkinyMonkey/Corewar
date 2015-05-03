@@ -1,5 +1,5 @@
 module Header (
-  generateHeader,
+  writeHeader,
   setProgName,
   setComment,
   newHeader,
@@ -58,6 +58,6 @@ serializeHeader header = do
   putWord32be $ progSize header
   putByteString $ B.pack $ rightPaddedString commentLength (comment header)
 
-generateHeader header fileName = B.writeFile
-  ((take (length(fileName) - 2) fileName) ++ ".cor")
+writeHeader header fileName = B.writeFile
+  fileName
   (B.concat $ BL.toChunks $ runPut (serializeHeader header))

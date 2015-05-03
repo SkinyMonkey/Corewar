@@ -3,8 +3,9 @@ import ParseAsm
 import CodeGeneration
 
 generateChampion fileName = do
-  res <- parseChampion fileName
-  generateCode res
+  parseRes <- parseChampion fileName
+  generateRes <- generateCode parseRes
+  return generateRes
 
 main :: IO ()
 main = do

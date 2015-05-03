@@ -17,7 +17,7 @@ SRCS =	asm.hs\
 				parseAsm.hs\
 				parseBase.hs
 
-FLAGS = -O -XHaskell2010 -W
+FLAGS = -O -W
 
 all: $(NAME)
 

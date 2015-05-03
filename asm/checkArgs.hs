@@ -6,10 +6,9 @@ module CheckArgs (
 import Op
 import ParseBase
 
+addLabelCall self value = (label, value):self
 addRegister self value = (register, value):self
 addIndirect self value = (indirect, value):self
-addLabelCall self value = (label, value):self
-
 addDirect self = (direct, snd lastPair):(init self)
   where lastPair = last self
 

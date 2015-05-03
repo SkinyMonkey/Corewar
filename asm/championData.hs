@@ -50,7 +50,7 @@ addMetadata self "name" value = self {header = (setProgName (header self) value)
 
 addMetadata self "comment" value = self {header = (setComment (header self) value)}
 
-addMetadata self field value = self
+addMetadata self _ _ = self
 
 data ChampionData = ChampionData {
   fileName :: String,
