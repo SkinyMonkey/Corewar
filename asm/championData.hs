@@ -16,6 +16,7 @@ module ChampionData (
 import Header
 import Op
 import Data.Word
+import qualified Data.Map as Map  
 
 getHeader :: ChampionData -> Header
 getHeader self = header self
@@ -38,11 +39,31 @@ incLineNbr :: ChampionData -> ChampionData
 incLineNbr self = self {lineNbr = nbr + 1}
   where nbr = getLineNbr self
 
-addLabel self label = self {labelFound = labels++[label]}
-  where labels = labelFound self
+-- FIXME : use common.hs definitions, indSize etc
+argByteSize arg
+  | parameterType == register = 4
+  | parameterType == direct = 4
+  | parameterType == indirect = 2
+  | otherwise = error "Unknown parameter type : this should never happen." 
+  where parameterType = fst arg 
 
--- instruction = (code, [(argType, argValue)])
-addInstruction self op args = self {instructions = (instructions self)++[instruction]}
+argsByteSize args = map argByteSize args
+
+byteCount :: [Char] -> [(Int, String)] -> Int
+byteCount mnemonic args =
+  if mnemonic `elem` noOpCodeMnemonics
+  then 2 -- FIXME : correct?
+  else 2 + (foldl (+) 0 $ argsByteSize args)
+  where noOpCodeMnemonics = ["live", "zjmp", "fork", "lfork"]
+
+addLabel self label = self {labels = Map.insert label offset labelsOffsets}
+  where labelsOffsets = labels self
+        offset = byteCounter self
+
+-- instruction = (code, [(parameterType, argValue)])
+addInstruction self mnemonic op args =
+  self {instructions = (instructions self)++[instruction],
+        byteCounter = (byteCounter self) + (byteCount mnemonic args)}
   where instruction = (getCode op, args)
 
 addMetadata :: ChampionData -> String -> String -> ChampionData
@@ -54,12 +75,13 @@ addMetadata self _ _ = self
 
 data ChampionData = ChampionData {
   fileName :: String,
-  lineNbr :: Int,
   currentLine :: String,
-  labelFound :: [String],
-  header :: Header,
-  instructions :: [(Word8,[(Int, String)])]
+  lineNbr :: Int,
+  byteCounter :: Int,
+  instructions :: [(Word8,[(Int, String)])],
+  labels :: Map.Map String Int,
+  header :: Header
 }
 
 newChampionData :: String -> ChampionData
-newChampionData fileName = ChampionData fileName 0 "" [] newHeader []
+newChampionData fileName = ChampionData fileName "" 0 0 [] Map.empty newHeader
