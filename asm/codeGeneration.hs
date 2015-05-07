@@ -126,7 +126,8 @@ finished fileName = putStrLn $ "Generation complete for " ++ fileName
 
 generateCode' cd = do
   writeHeader header $ getFileName cd -- FIXME : take cd instead of header/fileName
-  writeInstructions cd
+  res <- writeInstructions cd
+  return res
   finished $ getFileName cd
   where header = getHeader cd
 
@@ -135,5 +136,6 @@ corFileName fileName = (take (length(fileName) - 2) fileName) ++ ".cor"
 
 -- FIXME : extract progSize from cd and add it to Header
 generateCode cd = do
-  generateCode' $ resetByteCounter (setFileName cd fileName)
+  res <- generateCode' $ resetByteCounter (setFileName cd fileName)
+  return res
   where fileName = corFileName $ getFileName cd
