@@ -23,7 +23,7 @@ parseLabel candidate cd =
 
 parseOp' candidate args cd =
   if (rightArgsNbr op args && validTypes)
-  then (True, addInstruction cd candidate op argTypes)
+  then (True, addInstruction cd op argTypes)
   else (False, cd)
   where op = byMnemonic candidate
         (validTypes, argTypes) = retrieveTypes op args

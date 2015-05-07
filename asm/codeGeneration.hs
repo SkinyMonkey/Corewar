@@ -12,8 +12,6 @@ import ChampionData
 import Data.Word
 import Data.Bits
 
-corFileName fileName = (take (length(fileName) - 2) fileName) ++ ".cor"
-
 serializeRegister register = do
   putWord32be register
 
@@ -22,11 +20,12 @@ serializeDirect direct = do
 
 serializeIndirect indirect = do
   putWord16be indirect
---  putWord32be indirect
 
--- FIXME : mod to transform label into indirect?
-serializeLabel label = do
-  putWord32be label
+-- FIXME : get cd, code 
+serializeLabel :: Word32 -> Put
+serializeLabel labelOffset = do
+-- serializeIndirect labelOffset?
+  putWord32be labelOffset
 
 serializeOpCode opCode = do
   putWord8 opCode
@@ -58,70 +57,83 @@ generateOpCode instruction =
   generateOpCode' parameters
   where parameters = snd instruction
 
-generateParameter parameter
+generateOffset cd label = fromIntegral $ offset * (-1)
+  where offset = getByteCount cd - getLabelOffset cd label
+
+generateParameter cd parameter
   | parameterType == register = serializeRegister $ (read parameterValue :: Word32)
   | parameterType == direct = serializeDirect $ (read parameterValue :: Word32)
   | parameterType == indirect = serializeIndirect $ (read parameterValue :: Word16)
-  | parameterType == label = serializeLabel $ (read parameterValue :: Word32)
+  | parameterType == label = serializeLabel $ (generateOffset cd parameterValue :: Word32)
   | otherwise = error "Unknown parameter type : this should never happen."
   where parameterType = fst parameter
         parameterValue = snd parameter
 
-serializeParameters [] = error "No arguments given."
+-- How to apply a monad on each parameters and chain result?
+serializeParameters _ [] = error "No arguments given."
 
-serializeParameters [parameter] = do 
-  generateParameter parameter
+serializeParameters cd [parameter] = do 
+  generateParameter cd parameter
 
-serializeParameters (headParameter:tailParameters) = do
-  generateParameter headParameter
-  serializeParameters tailParameters
+serializeParameters cd (headParameter:tailParameters) = do
+  generateParameter cd headParameter
+  serializeParameters cd tailParameters
 
-serializeInstruction instruction = do
+serializeInstruction cd instruction = do
   serializeInstructionCode instructionCode
   serializeOpCode opCode
-  serializeParameters parameters
+  serializeParameters cd parameters
   where instructionCode = fst instruction
         opCode = (generateOpCode instruction) :: Word8
         parameters = snd instruction
 
-writeInstruction' instruction fileName = do
+writeInstruction' cd instruction = do
   B.appendFile fileName
     $ B.concat
     $ BL.toChunks
     $ runPut
-    $ serializeInstruction instruction
-  return True
+    $ serializeInstruction cd instruction
+  return $ incCounter cd opCode args
+  where fileName = getFileName cd
+        opCode = fst instruction
+        args = snd instruction
 
-writeInstruction instruction fileName = do
+writeInstruction cd instruction = do
   if not $ instructionCode `elem` noOpCodeInstructions
-  then writeInstruction' instruction fileName
-  else return True
+  then writeInstruction' cd instruction
+  else return cd
   where instructionCode = fst instruction
-        noOpCodeInstructions = [1, 9, 12, 15]
 
 -- FIXME : replace by map?
-writeInstructions' [] _ = do return True
-writeInstructions' [instruction] fileName = do
-  writeInstruction instruction fileName
-  return True
-
--- FIXME : remove <- (useless?)
-writeInstructions' (headInstruction:tailInstruction) fileName = do
-  res <- writeInstruction headInstruction fileName
+writeInstructions' cd [] = do return cd
+writeInstructions' cd [instruction] = do
+  res <- writeInstruction cd instruction
   return res
-  writeInstructions' tailInstruction fileName
 
-writeInstructions cd fileName = do
-  res <- writeInstructions' instructions fileName
+writeInstructions' cd (headInstruction:tailInstruction) = do
+  updatedCd <- writeInstruction cd headInstruction
+  res <- writeInstructions' updatedCd tailInstruction
+  return res
+
+-- FIXME : HERE : pass cd along from this function
+writeInstructions cd = do
+  res <- writeInstructions' cd instructions
   return res
   where instructions = getInstructions cd
 
 finished fileName = putStrLn $ "Generation complete for " ++ fileName
 --finished (False, cd) = putStrLn $ "Generation failed for " ++ getFileName cd
 
-generateCode cd = do
-  writeHeader header fileName
-  writeInstructions cd fileName
-  finished fileName
+generateCode' cd = do
+  writeHeader header $ getFileName cd -- FIXME : take cd instead of header/fileName
+  writeInstructions cd
+  finished $ getFileName cd
   where header = getHeader cd
-        fileName = corFileName $ getFileName cd
+
+-- FIXME : move to the where
+corFileName fileName = (take (length(fileName) - 2) fileName) ++ ".cor"
+
+-- FIXME : extract progSize from cd and add it to Header
+generateCode cd = do
+  generateCode' $ resetByteCounter (setFileName cd fileName)
+  where fileName = corFileName $ getFileName cd

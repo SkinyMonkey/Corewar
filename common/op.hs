@@ -7,6 +7,7 @@ module Op (
   getCode,
   getNbrCycles,
   getComment,
+  noOpCodeInstructions,
   register,
   direct,
   indirect,
@@ -123,6 +124,9 @@ opsbyCode = [byMnemonic name | name <- opsNames]
 
 byCode :: Int -> Op
 byCode index = opsbyCode !! index
+
+noOpCodeInstructions =
+  [code (byMnemonic op) | op <- ["live", "zjmp", "fork", "lfork"]]
 
 -- Defines for cycle informations ...
 _cycleToDie = 1536
