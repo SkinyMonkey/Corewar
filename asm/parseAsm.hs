@@ -64,7 +64,7 @@ parseLines' (lineHead:lineTail) cd =
   (headRes && tailRes, tailCd)
   where (headRes, headCd) = worked (parseInstruction lineHead cd)
         (tailRes, tailCd) = parseLines' lineTail (incLineNbr headCd)
-parseLines' [] cd = (False, cd)
+parseLines' [] cd = error $ "Line nbr " ++ (show $ getLineNbr cd)--(False, cd)
 
 parseLines lines cd = parseLines' lines $ setCurrentLine cd (head lines)
 

@@ -42,11 +42,7 @@ checkArgType' _ _ types = (False, types)
 
 -- Test each authorized types for one argument
 checkArgType [] _ types = (False, types)
-checkArgType [argType] arg types =
-  if headRes
-  then (headRes, headTypes)
-  else error ("Argument did not match any authorized type \"" ++ arg ++ "\"")
-  where (headRes, headTypes) = checkArgType' argType arg types
+checkArgType [argType] arg types = checkArgType' argType arg types
 
 checkArgType (headArgType:tailArgType) arg types =
   (headRes || tailRes, if tailRes == True then tailTypes else headTypes)
@@ -65,8 +61,12 @@ retrieveTypes' (headArgTypes:tailArgTypes) (headArg:tailArg) types =
 retrieveTypes' [] _ types = (False, types)
 retrieveTypes' _ [] types = (False, types)
 
-retrieveTypes op args = retrieveTypes' argsTypes args []
-  where argsTypes = getArgsTypes op
+retrieveTypes op args = 
+  if validTypes
+  then (validTypes, argTypes)
+  -- FIXME : add error infos
+  else error "Argument did not match any authorized types"
+  where (validTypes, argTypes) = retrieveTypes' (getArgsTypes op) args []
 
 rightArgsNbr op args = (getNbrArgs op == argsNbr
                           || (error $ "Bad # of args for mnemonic \""
