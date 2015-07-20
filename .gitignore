@@ -19,3 +19,7 @@ tmp/
 bin/
 compile
 *.cor
+*.swp
+*.swo
+
+test*
