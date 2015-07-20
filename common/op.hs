@@ -11,7 +11,9 @@ module Op (
   register,
   direct,
   indirect,
-  label
+  label,
+-- FIXME : debug
+  opsNames
 ) where
 
 -- import Data.Bits

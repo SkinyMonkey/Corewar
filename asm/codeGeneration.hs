@@ -12,24 +12,38 @@ import ChampionData
 import Data.Word
 import Data.Bits
 
-serializeRegister register = do
-  putWord32be register
+-- FIXME : DEBUG
+import Debug.Trace
 
+serializeRegister register | trace ("serializeRegister :" ++ (show register)) False = undefined
+serializeRegister register = do
+ putWord32be register
+
+serializeDirect direct | trace ("serializeDirect :" ++ (show direct)) False = undefined
 serializeDirect direct = do
   putWord32be direct
 
+serializeIndirect indirect | trace ("serializeIndirect :" ++ (show indirect)) False = undefined
 serializeIndirect indirect = do
   putWord16be indirect
 
 -- FIXME : get cd, code 
 serializeLabel :: Word32 -> Put
+
+serializeLabel labelOffset | trace ("serializeLabel :" ++ (show labelOffset)) False = undefined
+
 serializeLabel labelOffset = do
 -- serializeIndirect labelOffset?
   putWord32be labelOffset
 
+-- FIXME : add a function to opCode's binary value
+serializeOpCode opCode | trace ("serializeOpCode :" ++ (show opCode)) False = undefined
 serializeOpCode opCode = do
-  putWord8 opCode
+ putWord8 opCode
 
+serializeInstructionCode instructionCode | trace ("serializeInstructionCode :" ++ opStr) False = undefined
+--  where opStr = (opsNames !! (fromIntegral(instructionCode) ::Int))
+    where opStr = show instructionCode
 serializeInstructionCode instructionCode = do
   putWord8 instructionCode
 
@@ -58,7 +72,7 @@ generateOpCode instruction =
   where parameters = snd instruction
 
 generateOffset cd label = fromIntegral $ offset * (-1)
-  where offset = getByteCount cd - getLabelOffset cd label
+  where offset = (getByteCount cd) - (getLabelOffset cd label)
 
 generateParameter cd parameter
   | parameterType == register = serializeRegister $ (read parameterValue :: Word32)
@@ -87,6 +101,11 @@ serializeInstruction cd instruction = do
         opCode = (generateOpCode instruction) :: Word8
         parameters = snd instruction
 
+writeInstruction' cd instruction
+  | trace ("wi: " ++ ((show opCode) ++ " - " ++ (show args))) False = undefined
+  where opCode = fst instruction
+        args = snd instruction
+
 writeInstruction' cd instruction = do
   B.appendFile fileName
     $ B.concat
@@ -98,22 +117,31 @@ writeInstruction' cd instruction = do
         opCode = fst instruction
         args = snd instruction
 
+-- FIXME: not generating if there is no opCode
 writeInstruction cd instruction = do
   if not $ instructionCode `elem` noOpCodeInstructions
   then writeInstruction' cd instruction
   else return cd
   where instructionCode = fst instruction
 
--- FIXME : replace by map?
+-- FIXME : DEBUG
+
+writeInstructions' cd [instruction] |
+  trace ("wis: " ++ (show instruction)) False = undefined
+
 writeInstructions' cd [] = do return cd
 writeInstructions' cd [instruction] = do
   res <- writeInstruction cd instruction
   return res
 
+writeInstructions' cd (headInstruction:tailInstruction) |
+  trace ("wis: " ++ (show headInstruction)) False = undefined
+
 writeInstructions' cd (headInstruction:tailInstruction) = do
   updatedCd <- writeInstruction cd headInstruction
   res <- writeInstructions' updatedCd tailInstruction
   return res
+-- ENDFIXME
 
 -- FIXME : HERE : pass cd along from this function
 writeInstructions cd = do

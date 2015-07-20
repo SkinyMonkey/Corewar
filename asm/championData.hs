@@ -23,6 +23,9 @@ import Op
 import Data.Word
 import qualified Data.Map as Map  
 
+-- FIXME : DEBUG
+import Debug.Trace
+
 getHeader :: ChampionData -> Header
 getHeader self = header self
 
@@ -71,11 +74,8 @@ argsByteSize code args =
   then 2 -- FIXME : correct?
   else 2 + (foldl (+) 0 $ map argByteSize args)
 
--- instruction = (code, [(parameterType, argValue)])
+-- INFO : instruction = (code, [(parameterType, argValue)])
 addInstruction self op args =
---  self {instructions = (instructions self)++[instruction],
---        byteCounter = (byteCounter self) + (argsByteSize code args)}
-
   incCounter (self {instructions = (instructions self)++[instruction]}) code args
   where code = getCode op
         instruction = (code, args)

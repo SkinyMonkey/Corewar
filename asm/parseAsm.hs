@@ -37,7 +37,7 @@ parseOp _ _ cd = (False, cd)
 parseInstruction' [] cd = (True, cd)
 parseInstruction' (token:args) cd
   | head token == '#' = (True, cd)
-  | head token == '.' = parseMetadata token (intercalate "" args) cd
+  | head token == '.' = parseMetadata token (intercalate " " args) cd
   | last token == ':' = (headRes && tailRes, tailCd)
   | otherwise = parseOp token args cd
     where (headRes, headCd) = parseLabel token cd
@@ -74,8 +74,6 @@ finished (True, cd) = do
 finished (False, cd) = error $ "Compilation failed for " ++ getFileName cd
 
 parseChampion fileName = do
-  championFile <- openFile fileName ReadMode
-  content <- hGetContents championFile
+  content <- readFile fileName
   res <- finished $ parseLines (lines content) (newChampionData fileName)
-  hClose championFile
   return res
