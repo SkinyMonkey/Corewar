@@ -80,7 +80,8 @@ addInstruction self op args =
   where code = getCode op
         instruction = (code, args)
 
-addLabel self label = self {labels = Map.insert label offset labelsOffsets}
+addLabel self label | trace ("addlabel: " ++ (init label)) False = undefined
+addLabel self label = self {labels = Map.insert (init label) offset labelsOffsets}
   where labelsOffsets = labels self
         offset = byteCounter self
 

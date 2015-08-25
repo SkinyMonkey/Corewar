@@ -1,5 +1,5 @@
 module CodeGeneration (
-  generateCode
+  generateCode,
 ) where
 
 import qualified Data.ByteString.Lazy as BL
@@ -50,20 +50,25 @@ serializeInstructionCode instructionCode = do
 -- 01 register
 -- 10 direct
 -- 11 indirect
-encode parameterType parameter index
+encode parameterType index
   | parameterType == register = shiftL 0x01 index
   | parameterType == direct = shiftL 0x02 index
   | parameterType == indirect = shiftL 0x03 index
   | otherwise = error "Unknown parameter type : this should never happen."
 
-generateOpCode' ((t1, p1):(t2, p2):(t3, p3):(t4, p4):[]) =
-  encode t1 p1 6 .|. (encode t2 p2 4 .|. (encode t3 p3 2 .|. encode t4 p4 0))
-generateOpCode' ((t1, p1):(t2, p2):(t3, p3):[]) =
-  encode t1 p1 6 .|. (encode t2 p2 4 .|. encode t3 p3 2)
-generateOpCode' ((t1, p1):(t2, p2):[]) =
-  encode t1 p1 6 .|. encode t2 p2 4
-generateOpCode' ((t1, p1):[]) = 
-  encode t1 p1 6
+-- FIXME : compiler says pattern matche(s) are non-exhaustive
+-- but if we add it stops on a parse error ...
+-- generateOpCode' (_, _) : ((_, _) : ((_, _) : ((_, _) : (_ : _)))) =
+--  error "Too much parameters : this should never happen."
+
+generateOpCode' ((t1, _):(t2, _):(t3, _):(t4, _):[]) =
+  encode t1 6 .|. (encode t2 4 .|. (encode t3 2 .|. encode t4 0))
+generateOpCode' ((t1, _):(t2, _):(t3, _):[]) =
+  encode t1 6 .|. (encode t2 4 .|. encode t3 2)
+generateOpCode' ((t1, _):(t2, _):[]) =
+  encode t1 6 .|. encode t2 4
+generateOpCode' ((t1, _):[]) = 
+  encode t1 6
 
 generateOpCode' [] = error "No parameters : this should never happen."
 
@@ -93,20 +98,25 @@ serializeParameters cd (headParameter:tailParameters) = do
   generateParameter cd headParameter
   serializeParameters cd tailParameters
 
-serializeInstruction cd instruction = do
+serializeInstructionWithOpCode cd instructionCode opCode parameters = do
   serializeInstructionCode instructionCode
   serializeOpCode opCode
   serializeParameters cd parameters
+
+serializeInstructionWithoutOpCode cd instructionCode parameters = do
+  serializeInstructionCode instructionCode
+  serializeParameters cd parameters
+
+-- FIXME : find a way to branch instead of using multiple similare functions
+serializeInstruction cd instruction = do
+  if not $ instructionCode `elem` noOpCodeInstructions
+  then serializeInstructionWithOpCode cd instructionCode opCode parameters
+  else serializeInstructionWithoutOpCode cd instructionCode parameters
   where instructionCode = fst instruction
         opCode = (generateOpCode instruction) :: Word8
         parameters = snd instruction
 
-writeInstruction' cd instruction
-  | trace ("wi: " ++ ((show opCode) ++ " - " ++ (show args))) False = undefined
-  where opCode = fst instruction
-        args = snd instruction
-
-writeInstruction' cd instruction = do
+writeInstruction cd instruction = do
   B.appendFile fileName
     $ B.concat
     $ BL.toChunks
@@ -117,31 +127,15 @@ writeInstruction' cd instruction = do
         opCode = fst instruction
         args = snd instruction
 
--- FIXME: not generating if there is no opCode
-writeInstruction cd instruction = do
-  if not $ instructionCode `elem` noOpCodeInstructions
-  then writeInstruction' cd instruction
-  else return cd
-  where instructionCode = fst instruction
-
--- FIXME : DEBUG
-
-writeInstructions' cd [instruction] |
-  trace ("wis: " ++ (show instruction)) False = undefined
-
 writeInstructions' cd [] = do return cd
 writeInstructions' cd [instruction] = do
   res <- writeInstruction cd instruction
   return res
 
-writeInstructions' cd (headInstruction:tailInstruction) |
-  trace ("wis: " ++ (show headInstruction)) False = undefined
-
 writeInstructions' cd (headInstruction:tailInstruction) = do
   updatedCd <- writeInstruction cd headInstruction
   res <- writeInstructions' updatedCd tailInstruction
   return res
--- ENDFIXME
 
 -- FIXME : HERE : pass cd along from this function
 writeInstructions cd = do

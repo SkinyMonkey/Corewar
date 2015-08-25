@@ -2,7 +2,6 @@ module ParseAsm (
   parseChampion
 ) where
 
-import System.IO
 import Data.List
 
 import Op
@@ -10,6 +9,9 @@ import Utils
 import ParseBase
 import CheckArgs
 import ChampionData
+
+-- FIXME : DEBUG
+import Debug.Trace
 
 parseMetadata field cstring cd =
   if (fst $ parseId $ tail field) && (parseString cstring)
@@ -68,6 +70,7 @@ parseLines' [] cd = error $ "Line nbr " ++ (show $ getLineNbr cd)--(False, cd)
 
 parseLines lines cd = parseLines' lines $ setCurrentLine cd (head lines)
 
+finished (True, cd) | trace (show (getInstructions cd)) False = undefined
 finished (True, cd) = do
   putStrLn $ "Compilation complete for " ++ getFileName cd
   return cd
