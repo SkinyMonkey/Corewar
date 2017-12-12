@@ -38,10 +38,10 @@ parseOp _ _ cd = (False, cd)
 
 parseInstruction' [] cd = (True, cd)
 parseInstruction' (token:args) cd
-  | head token == '#' = (True, cd)
-  | head token == '.' = parseMetadata token (intercalate " " args) cd
-  | last token == ':' = (headRes && tailRes, tailCd)
-  | otherwise = parseOp token args cd
+  | head token == '#' = (True, cd) -- comment
+  | head token == '.' = parseMetadata token (intercalate " " args) cd -- metadta
+  | last token == ':' = (headRes && tailRes, tailCd) -- label
+  | otherwise = parseOp token args cd -- op
     where (headRes, headCd) = parseLabel token cd
           (tailRes, tailCd) =
             if (length(args) > 0)
