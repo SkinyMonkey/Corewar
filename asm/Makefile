@@ -13,7 +13,7 @@ COMMON_SRCS = ../common/header.hs\
 SRCS =	asm.hs\
 				championData.hs\
 				checkArgs.hs\
-				codeGeneration.hs\
+#				codeGeneration.hs\
 				parseAsm.hs\
 				parseBase.hs
 
@@ -30,7 +30,7 @@ $(NAME): $(COMMON_SRCS) $(SRCS)
 
 debug:
 	@echo "HELP : To debug an exception use :args to set the program argument and :back\n"
-	ghci $(COMMON_SRCS) $(SRCS)
+	ghci $(SRCS) $(COMMON_SRCS)
 
 clean:
 	rm -f $(INTERMEDIATE_DIR)/*.o

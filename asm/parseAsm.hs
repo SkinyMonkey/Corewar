@@ -1,5 +1,6 @@
 module ParseAsm (
-  parseChampion
+  parseChampion,
+  parseInstruction', -- DEBUG
 ) where
 
 import Data.List
@@ -11,7 +12,7 @@ import CheckArgs
 import ChampionData
 
 -- FIXME : DEBUG
---import Debug.Trace
+import Debug.Trace
 
 type ParseResult = (Bool, ChampionData)
 
@@ -25,10 +26,8 @@ parseMetadata (key:args) championData =
   else reject championData
 parseMetadata _ championData = reject championData
 
-parseLabel :: [String] -> ChampionData -> ParseResult
-parseLabel (candidate:_) championData =
-  let label = init candidate
-  in
+parseLabel :: String -> ChampionData -> ParseResult
+parseLabel label championData =
   if (solved $ parseId label)
   then resolve $ addLabel championData label
   else reject championData
@@ -39,13 +38,16 @@ parseOp' candidate args championData =
   let op = byMnemonic candidate
       (validTypes, argTypes) = checkArgTypes op args
   in
-  if (rightArgsNbr op args && validTypes)
+  if (rightArgsNbr op args championData && validTypes)
   then resolve $ addInstruction championData op argTypes
   else reject $ championData
 
+splitOnCommas :: [String] -> [String]
+splitOnCommas args = concat $ map (wordsWhen (==',')) args
+
 parseOp :: [String] -> ChampionData -> ParseResult
 parseOp (candidate:args) championData
-  | length(args) > 0 = parseOp' candidate (wordsWhen (==',') $ head args) championData
+  | length(args) > 0 = parseOp' candidate (splitOnCommas args) championData
   | length(args) == 0 =
     error $ "No argument given to " ++ candidate ++ " line " ++ (show $ getLineNbr championData)
 parseOp _ championData = reject championData
@@ -58,10 +60,9 @@ parseInstruction' (token:args) championData
   | last token == ':' = parseLabel'                        -- label
   | otherwise = parseOp tokens championData                -- op
     where tokens = token:args
-          parseLabel' = let (_:args) = tokens
-                        in if length (args) > 0
-                           then parseOp tokens $ snd $ parseLabel tokens championData
-                           else parseLabel tokens championData
+          parseLabel' = if length (args) > 0
+                        then parseOp args $ snd $ parseLabel token championData
+                        else parseLabel token championData
 parseInstruction' _ championData = reject championData
 
 parseInstruction :: String -> ChampionData -> ParseResult
@@ -80,14 +81,17 @@ worked (False, championData) =
   ++ (show $ (getLineNbr championData) + 1) ++ ")"
 worked x = x
 
-parseLines' :: String -> ParseResult -> ParseResult
-parseLines' line (parseRes, championData) = 
-  let updatedChampionData = setCurrentLine championData line
-      (currentParseRes, championData') = parseInstruction line updatedChampionData
-  in worked $ (parseRes && currentParseRes, championData')
+parseLines' :: ParseResult -> String -> ParseResult
+parseLines' (parseRes, championData) line  = 
+  let updatedChampionData = incLineNbr $ setCurrentLine championData line
+      currentResult = parseInstruction (trace' line) updatedChampionData
+      (currentParseRes, championData') = currentResult
+  in worked $ if currentParseRes
+              then currentResult
+              else (parseRes, updatedChampionData)
 
 parseLines :: [String] -> ChampionData -> ParseResult
-parseLines lines championData = foldr parseLines' (resolve championData) lines
+parseLines lines championData = foldl parseLines' (resolve championData) lines
 
 parseChampion :: String -> String -> ParseResult
 parseChampion fileName content =

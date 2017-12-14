@@ -1,20 +1,19 @@
 import System.Environment (getArgs)
+import ParseBase
 import ParseAsm
+import ChampionData
 --import CodeGeneration
 
 import Debug.Trace
 
--- TODO : move finished here
--- finished (True, cd) | trace (show (getInstructions cd)) False = undefined
--- finished (True, cd) = do
---   putStrLn $ "Compilation complete for " ++ getFileName cd
---   return cd
--- finished (False, cd) = error $ "Compilation failed for " ++ getFileName cd
+finished step fileName (True, x) = (step ++ " complete for " ++ fileName, x)
+finished step fileName (False, x) = error $ step ++ " failed for " ++ fileName
 
+--generateChampion :: String -> IO (ParseResult)
 generateChampion fileName = do
   content <- readFile fileName
-  let championData = parseChampion fileName content -- TODO : finished
-  error $ show $ snd championData
+  let (_, championData) = parseChampion fileName content -- TODO : finished
+  traceIO $ show $ championData
   return championData
 --  offsets = computeOffsets championData
 --  binaryCode = generateCode championData offsets -- TODO : finished

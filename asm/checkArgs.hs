@@ -5,6 +5,7 @@ module CheckArgs (
 
 import Op
 import ParseBase
+import ChampionData
 
 -- FIXME : DEBUG
 import Debug.Trace
@@ -74,13 +75,13 @@ isDirect candidate typesAcc =
 -- [value | label]
 isIndirect :: ArgContent -> ArgTypeAccumulator -> CheckResult
 isIndirect candidate typesAcc =
-  if (headRes)
-  then trace ("LABEL ADDED: " ++ (show headTypes)) (headRes, headTypes)
-  else if (tailRes)
-       then trace ("NO LABEL FOUND: " ++ (show value)) (tailRes, addIndirect typesAcc value)
-       else (False, typesAcc)
-  where (headRes, headTypes) = isLabel candidate typesAcc
-        (tailRes, value) = parseNum candidate
+  let labelResult = isLabel candidate typesAcc
+  in if solved labelResult
+     then labelResult
+     else let (indirectRes, value) = parseNum candidate
+          in if indirectRes
+             then resolve $ addIndirect typesAcc value
+             else reject typesAcc
 
 -- Label : id precedeed by LABEL_CHAR
 -- ':' #id
@@ -128,12 +129,16 @@ checkArgTypes op args =
 
 -- END
 
-rightArgsNbr :: Op -> [ArgContent] -> Bool
-rightArgsNbr op args = (getNbrArgs op == argsNbr
+rightArgsNbr :: Op -> [ArgContent] -> ChampionData -> Bool
+rightArgsNbr op args championData = (getNbrArgs op == argsNbr
                           || (error $ "Bad # of args for mnemonic \""
                              ++ getMnemonic op
                              ++ "\": "
                              ++ (show argsNbr)
                              ++ " instead of "
-                             ++ (show (getNbrArgs op))))
+                             ++ (show (getNbrArgs op))
+                             ++ " in \""
+                             ++ getCurrentLine championData
+                             ++ "\""
+                             ))
   where argsNbr = length(args)

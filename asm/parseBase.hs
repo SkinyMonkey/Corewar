@@ -5,9 +5,15 @@ module ParseBase (
   resolve,
   reject,
   solved,
+  trace'
 ) where
 
 import Data.Char
+
+-- FIXME : DEBUG
+import Debug.Trace
+
+trace' x = trace ("$>" ++ (show x)) x
 
 parseString :: [Char] -> Bool
 parseString token = (head token == '"') && (last token == '"')

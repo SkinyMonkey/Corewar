@@ -76,9 +76,13 @@ argsByteSize code args =
 
 -- INFO : instruction = (code, [(parameterType, argValue)])
 addInstruction self op args =
-  incCounter (self {instructions = (instructions self)++[instruction]}) code args
-  where code = getCode op
-        instruction = (code, args)
+  let code = getCode op
+      byteSize = argsByteSize code args
+      instruction = (code, args, byteSize)
+      newInstructions = (instructions self)++[instruction]
+      newByteCounter = (byteCounter self) + byteSize
+  in
+  self {instructions = newInstructions, byteCounter = newByteCounter }
 
 addLabel _ label | trace ("addlabel: " ++ (init label)) False = undefined
 addLabel self label = self {labels = Map.insert label offset labelsOffsets}
@@ -102,10 +106,18 @@ data ChampionData = ChampionData {
   currentLine :: String,
   lineNbr :: Int,
   byteCounter :: Int,
-  instructions :: [(Word8,[(ArgType, String)])],
+  instructions :: [(Word8,[(ArgType, String)], Int)],
   labels :: Map.Map String Int,
   header :: Header
 } deriving (Show)
 
 newChampionData :: String -> ChampionData
-newChampionData fileName = ChampionData fileName "" 0 0 [] Map.empty newHeader
+newChampionData fileName = ChampionData {
+  fileName = fileName,
+  currentLine = "",
+  lineNbr = 0,
+  byteCounter = 0,
+  instructions = [],
+  labels = Map.empty,
+  header = newHeader
+}
