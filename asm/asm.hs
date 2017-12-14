@@ -14,6 +14,7 @@ import Debug.Trace
 generateChampion fileName = do
   content <- readFile fileName
   let championData = parseChampion fileName content -- TODO : finished
+  error $ show $ snd championData
   return championData
 --  offsets = computeOffsets championData
 --  binaryCode = generateCode championData offsets -- TODO : finished

@@ -11,19 +11,18 @@ import Debug.Trace
 
 -- ArgType : ArgType, indirect, direct, label
 -- ArgContent : Token, value
-type ArgType = Int
 type ArgContent = String
 type ArgTypeAccumulator = [(ArgType, ArgContent)]
 type CheckResult = (Bool, ArgTypeAccumulator)
 
 addLabelCall :: ArgTypeAccumulator -> ArgContent -> ArgTypeAccumulator
-addLabelCall self labelName = (label, labelName):self
+addLabelCall self labelName = (Label, labelName):self
 
 addRegister :: ArgTypeAccumulator -> ArgContent -> ArgTypeAccumulator
-addRegister self registerNumber = (register, registerNumber):self
+addRegister self registerNumber = (Register, registerNumber):self
 
 addIndirect :: ArgTypeAccumulator -> ArgContent -> ArgTypeAccumulator
-addIndirect self indirectValue = (indirect, indirectValue):self
+addIndirect self indirectValue = (Indirect, indirectValue):self
 
 -- FIXME : HERE we take the last arg of the list and use its value
 -- --> (direct, "label")
@@ -32,31 +31,16 @@ addIndirect self indirectValue = (indirect, indirectValue):self
 -- CHECK IF ARGTYPE == 
 addDirect :: ArgTypeAccumulator -> ArgTypeAccumulator
 addDirect self = 
-  if argType /= label
-  then (direct, value):(init self)
+  if argType /= Label
+  then (Direct, value):(init self)
   else self
   where (argType, value) = last self
-
--- Register : r1 <–> rx with x = REG_NUMBER
--- Example : ld r1,r2 (load r1 in r2)
--- 'r' #identifier
---
--- Direct : The character DIRECT_CHAR followed by a value or a label (preceded
--- by LABEL_CHARS), which represents a direct value.
--- Example : ld $4,r5 (load 4 in r5)
--- Example : ld %:label, r7 (load label in r7)
--- '%' [value | label]
---
--- Indirect : A value or a label (preceded by LABEL_CHARS) which represents the
--- value contained at the address of the parameter, relative to the PC.
--- Example : ld 4,r5 (load the 4 bytes at address (4+PC) in r5).
--- [value | label]
-
--- Label : id precedeed by LABEL_CHAR
 
 -- FIXME : make a generic function that check if it's a value or a label
 --         use it in direct and indirect
 
+-- Register : r1 <–> rx with x = REG_NUMBER
+-- Example : ld r1,r2 (load r1 in r2)
 -- 'r' #num
 isRegister :: ArgContent -> ArgTypeAccumulator -> CheckResult
 isRegister candidate typesAcc =
@@ -66,6 +50,10 @@ isRegister candidate typesAcc =
      then resolve $ addRegister typesAcc registerNumber
      else reject typesAcc
 
+-- Direct : The character DIRECT_CHAR followed by a value or a label (preceded
+-- by LABEL_CHARS), which represents a direct value.
+-- Example : ld $4,r5 (load 4 in r5)
+-- Example : ld %:label, r7 (load label in r7)
 -- '%' [ label | value ]
 -- FIXME : should call isLabel?
 isDirect :: ArgContent -> ArgTypeAccumulator -> CheckResult
@@ -79,8 +67,11 @@ isDirect candidate typesAcc =
 
 -- FIXME : how are indirect and label related?
 --         can we separate the test completely?
---
---  [ label | value ]
+
+-- Indirect : A value or a label which represents the
+-- value contained at the address of the parameter, relative to the PC.
+-- Example : ld 4,r5 (load the 4 bytes at address (4+PC) in r5).
+-- [value | label]
 isIndirect :: ArgContent -> ArgTypeAccumulator -> CheckResult
 isIndirect candidate typesAcc =
   if (headRes)
@@ -91,6 +82,7 @@ isIndirect candidate typesAcc =
   where (headRes, headTypes) = isLabel candidate typesAcc
         (tailRes, value) = parseNum candidate
 
+-- Label : id precedeed by LABEL_CHAR
 -- ':' #id
 isLabel :: ArgContent -> ArgTypeAccumulator -> CheckResult
 isLabel candidate typesAcc =
@@ -107,9 +99,9 @@ checkArgType' :: ArgContent -> ArgType -> CheckResult -> CheckResult
 checkArgType' arg argType result =
  let (_, typesAcc) = result
      currentResult = case argType of
-      register -> isRegister arg typesAcc
-      indirect -> isIndirect arg typesAcc
-      direct -> isDirect arg typesAcc
+      Register -> isRegister arg typesAcc
+      Indirect -> isIndirect arg typesAcc
+      Direct -> isDirect arg typesAcc
      in if solved currentResult
         then currentResult
         else result
@@ -126,10 +118,11 @@ checkArgType (argTypes, arg) result =
 -- Returns an evaluation of the res
 checkArgTypes :: Op -> [ArgContent] -> CheckResult
 checkArgTypes op args = 
-  let opArgsTypes = getArgsTypes op -- get valid typesAcc from op
-      result = foldr checkArgType (resolve []) $ zip opArgsTypes args
-  in if solved result
-     then result
+  let opArgsTypes = getArgsTypes op -- get valid types from op
+      result = resolve ([])
+      endResult = foldr checkArgType result $ zip opArgsTypes args
+  in if solved endResult
+     then endResult
      -- FIXME : add error infos
      else error "Argument did not match any authorized types"
 

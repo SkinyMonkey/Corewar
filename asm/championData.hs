@@ -61,14 +61,14 @@ incLineNbr self = self {lineNbr = nbr + 1}
   where nbr = getLineNbr self
 
 -- FIXME : use common.hs definitions, indSize etc
-argByteSize arg
-  | parameterType == register = 4
-  | parameterType == direct = 4
-  | parameterType == indirect = 2
-  | otherwise = error "Unknown parameter type : this should never happen." 
+argByteSize arg = 
+  case parameterType of
+    Register -> 4
+    Direct -> 4
+    Indirect -> 2
   where parameterType = fst arg 
 
-argsByteSize :: Word8 -> [(Int, String)] -> Int
+argsByteSize :: Word8 -> [(ArgType, String)] -> Int
 argsByteSize code args =
   if code `elem` noOpCodeInstructions
   then 2 -- FIXME : correct?
@@ -93,7 +93,7 @@ addMetadata self _ _ = self
 resetByteCounter :: ChampionData -> ChampionData
 resetByteCounter self = self {byteCounter = 0}
 
-incCounter :: ChampionData -> Word8 -> [(Int, String)] -> ChampionData
+incCounter :: ChampionData -> Word8 -> [(ArgType, String)] -> ChampionData
 incCounter self code args =
   self {byteCounter = (byteCounter self) + (argsByteSize code args)}
 
@@ -102,10 +102,10 @@ data ChampionData = ChampionData {
   currentLine :: String,
   lineNbr :: Int,
   byteCounter :: Int,
-  instructions :: [(Word8,[(Int, String)])],
+  instructions :: [(Word8,[(ArgType, String)])],
   labels :: Map.Map String Int,
   header :: Header
-}
+} deriving (Show)
 
 newChampionData :: String -> ChampionData
 newChampionData fileName = ChampionData fileName "" 0 0 [] Map.empty newHeader
