@@ -17,7 +17,7 @@ SRCS =	asm.hs\
 				parseAsm.hs\
 				parseBase.hs
 
-FLAGS = -O -W
+FLAGS = -O -W -Wall
 
 all: $(NAME)
 

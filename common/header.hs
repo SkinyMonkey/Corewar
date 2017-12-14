@@ -30,14 +30,14 @@ commentLength = 2048
 
 rightPaddedString :: Int -> [Char] -> [Char]
 rightPaddedString size string =
-  string ++ [chr(0) | c <- [1..size - length(string)]]
+  string ++ [chr(0) | _ <- [1..size - length(string)]]
 
 data Header = Header {
   magic :: B.ByteString,
   progName :: String,
   progSize :: Word32,
   comment :: String
-}	deriving (Show)
+} deriving (Show)
 
 setProgName :: Header -> String -> Header
 setProgName self value = self {progName = value}

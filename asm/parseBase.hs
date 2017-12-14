@@ -1,7 +1,10 @@
 module ParseBase (
   parseString,
   parseNum,
-  parseId
+  parseId,
+  resolve,
+  reject,
+  solved,
 ) where
 
 import Data.Char
@@ -15,7 +18,7 @@ identifierChar c = (((ord(c) >= ord('a')) && (ord(c) <= ord('z'))) || c == '_') 
 numChar :: Char -> Bool
 numChar c = ((ord(c) >= ord('0')) && (ord(c) <= ord('9')))
 
-parseNum :: [Char] -> (Bool, [Char])
+parseNum :: [Char] -> (Bool, String)
 parseNum candidate
   | head candidate == '-' =
     (length(filter (not . numChar) $ tail candidate) == 0, candidate)
@@ -24,3 +27,12 @@ parseNum candidate
 
 parseId :: [Char] -> (Bool, [Char])
 parseId candidate = (length(filter ( not . identifierChar) candidate) == 0, candidate)
+
+solved :: (a, b) -> a
+solved = fst
+
+resolve :: a -> (Bool, a)
+resolve x = (True, x)
+
+reject :: a -> (Bool, a)
+reject x = (False, x)

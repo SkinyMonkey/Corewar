@@ -11,72 +11,84 @@ import CheckArgs
 import ChampionData
 
 -- FIXME : DEBUG
-import Debug.Trace
+--import Debug.Trace
 
-parseMetadata field cstring cd =
-  if (fst $ parseId $ tail field) && (parseString cstring)
-  then (True, addMetadata cd (tail field) cstring)
-  else (False, cd)
+type ParseResult = (Bool, ChampionData)
 
-parseLabel candidate cd =
-  if (fst $ parseId $ take (length(candidate) - 1) candidate)
-  then (True, addLabel cd candidate)
-  else (False, cd)
+parseMetadata :: [String] -> ChampionData -> ParseResult
+parseMetadata (key:args) championData =
+  let cstring = intercalate " " args
+      field = tail key -- removing the '.' char
+  in
+  if (solved $ parseId field) && (parseString cstring)
+  then resolve $ addMetadata championData field cstring
+  else reject championData
+parseMetadata _ championData = reject championData
 
-parseOp' candidate args cd =
+parseLabel :: [String] -> ChampionData -> ParseResult
+parseLabel (candidate:_) championData =
+  let label = init candidate
+  in
+  if (solved $ parseId label)
+  then resolve $ addLabel championData label
+  else reject championData
+parseLabel _ championData = reject championData
+
+parseOp' :: String -> [String] -> ChampionData -> ParseResult
+parseOp' candidate args championData =
+  let op = byMnemonic candidate
+      (validTypes, argTypes) = checkArgTypes op args
+  in
   if (rightArgsNbr op args && validTypes)
-  then (True, addInstruction cd op argTypes)
-  else (False, cd)
-  where op = byMnemonic candidate
-        (validTypes, argTypes) = retrieveTypes op args
+  then resolve $ addInstruction championData op argTypes
+  else reject $ championData
 
-parseOp candidate args cd
-  | length(args) > 0 = parseOp' candidate (wordsWhen (==',') $ head args) cd
+parseOp :: [String] -> ChampionData -> ParseResult
+parseOp (candidate:args) championData
+  | length(args) > 0 = parseOp' candidate (wordsWhen (==',') $ head args) championData
   | length(args) == 0 =
-    error $ "No argument given to " ++ candidate ++ " line " ++ (show $ getLineNbr cd)
-parseOp _ _ cd = (False, cd)
+    error $ "No argument given to " ++ candidate ++ " line " ++ (show $ getLineNbr championData)
+parseOp _ championData = reject championData
 
-parseInstruction' [] cd = (True, cd)
-parseInstruction' (token:args) cd
-  | head token == '#' = (True, cd) -- comment
-  | head token == '.' = parseMetadata token (intercalate " " args) cd -- metadta
-  | last token == ':' = (headRes && tailRes, tailCd) -- label
-  | otherwise = parseOp token args cd -- op
-    where (headRes, headCd) = parseLabel token cd
-          (tailRes, tailCd) =
-            if (length(args) > 0)
-            then parseOp (head args) (tail args) headCd
-            else (True, headCd)
- 
-parseInstruction tokens cd
-  | (length tokens) > 0 = parseInstruction' (words tokens) uCd
-  | (length tokens) == 0 = (True, uCd)
-  where uCd = setCurrentLine cd tokens
-parseInstruction _ cd = (False, cd)
+-- FIXME : how to compose parseOp with parseLabel if needed?
+parseInstruction' :: [String] -> ChampionData -> ParseResult
+parseInstruction' (token:args) championData
+  | head token == '#' = resolve championData               -- comment
+  | head token == '.' = parseMetadata tokens championData  -- metadata
+  | last token == ':' = parseLabel'                        -- label
+  | otherwise = parseOp tokens championData                -- op
+    where tokens = token:args
+          parseLabel' = let (_:args) = tokens
+                        in if length (args) > 0
+                           then parseOp tokens $ snd $ parseLabel tokens championData
+                           else parseLabel tokens championData
+parseInstruction' _ championData = reject championData
 
-worked (True, cd) = (True, cd)
-worked (False, cd) =
+parseInstruction :: String -> ChampionData -> ParseResult
+parseInstruction line championData
+  | (length line) == 0 = resolve championData -- the line is empty
+  | (length line) > 0 = let tokens = words line
+                        in  parseInstruction' tokens championData
+parseInstruction _ championData = reject championData
+
+-- TODO : remove worked in favor of error accumulation
+worked :: ParseResult -> ParseResult
+worked (False, championData) =
   error $ "Syntax error \""
-  ++ (getCurrentLine cd)
+  ++ (getCurrentLine championData)
   ++ "\" (line "
-  ++ (show $ (getLineNbr cd) + 1) ++ ")"
+  ++ (show $ (getLineNbr championData) + 1) ++ ")"
+worked x = x
 
-parseLines' [line] cd = worked (parseInstruction line cd)
-parseLines' (lineHead:lineTail) cd =
-  (headRes && tailRes, tailCd)
-  where (headRes, headCd) = worked (parseInstruction lineHead cd)
-        (tailRes, tailCd) = parseLines' lineTail (incLineNbr headCd)
-parseLines' [] cd = error $ "Line nbr " ++ (show $ getLineNbr cd)--(False, cd)
+parseLines' :: String -> ParseResult -> ParseResult
+parseLines' line (parseRes, championData) = 
+  let updatedChampionData = setCurrentLine championData line
+      (currentParseRes, championData') = parseInstruction line updatedChampionData
+  in worked $ (parseRes && currentParseRes, championData')
 
-parseLines lines cd = parseLines' lines $ setCurrentLine cd (head lines)
+parseLines :: [String] -> ChampionData -> ParseResult
+parseLines lines championData = foldr parseLines' (resolve championData) lines
 
-finished (True, cd) | trace (show (getInstructions cd)) False = undefined
-finished (True, cd) = do
-  putStrLn $ "Compilation complete for " ++ getFileName cd
-  return cd
-finished (False, cd) = error $ "Compilation failed for " ++ getFileName cd
-
-parseChampion fileName = do
-  content <- readFile fileName
-  res <- finished $ parseLines (lines content) (newChampionData fileName)
-  return res
+parseChampion :: String -> String -> ParseResult
+parseChampion fileName content =
+  parseLines (lines content) (newChampionData fileName)

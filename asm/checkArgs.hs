@@ -1,6 +1,6 @@
 module CheckArgs (
   rightArgsNbr,
-  retrieveTypes
+  checkArgTypes
 ) where
 
 import Op
@@ -9,15 +9,28 @@ import ParseBase
 -- FIXME : DEBUG
 import Debug.Trace
 
-addLabelCall self value = (label, value):self
-addRegister self value = (register, value):self
-addIndirect self value = (indirect, value):self
+-- ArgType : ArgType, indirect, direct, label
+-- ArgContent : Token, value
+type ArgType = Int
+type ArgContent = String
+type ArgTypeAccumulator = [(ArgType, ArgContent)]
+type CheckResult = (Bool, ArgTypeAccumulator)
+
+addLabelCall :: ArgTypeAccumulator -> ArgContent -> ArgTypeAccumulator
+addLabelCall self labelName = (label, labelName):self
+
+addRegister :: ArgTypeAccumulator -> ArgContent -> ArgTypeAccumulator
+addRegister self registerNumber = (register, registerNumber):self
+
+addIndirect :: ArgTypeAccumulator -> ArgContent -> ArgTypeAccumulator
+addIndirect self indirectValue = (indirect, indirectValue):self
 
 -- FIXME : HERE we take the last arg of the list and use its value
 -- --> (direct, "label")
 -- WHY ARE WE DOING THIS?
 -- AND WHY ARE WE STILL GOING IN isDirect EVEN IF WE FOUND a TYPE THAT MATCH?
 -- CHECK IF ARGTYPE == 
+addDirect :: ArgTypeAccumulator -> ArgTypeAccumulator
 addDirect self = 
   if argType /= label
   then (direct, value):(init self)
@@ -45,70 +58,84 @@ addDirect self =
 --         use it in direct and indirect
 
 -- 'r' #num
-isRegister candidate types = (headRes && tailRes, addRegister types value)
-  where headRes = (head candidate == 'r')
-        (tailRes, value) = parseNum (tail candidate)
+isRegister :: ArgContent -> ArgTypeAccumulator -> CheckResult
+isRegister candidate typesAcc =
+  let registerChar = head candidate
+      registerNumber = tail candidate
+  in if registerChar == 'r' && (solved $ parseNum registerNumber)
+     then resolve $ addRegister typesAcc registerNumber
+     else reject typesAcc
 
--- '%' [label | value]
+-- '%' [ label | value ]
 -- FIXME : should call isLabel?
-isDirect candidate types = (headRes && tailRes, addDirect tailTypes)
-  where headRes = head candidate == '%' -- && (candidate !! 1) /= ':'
-        (tailRes, tailTypes) = isIndirect (tail candidate) types
-
+isDirect :: ArgContent -> ArgTypeAccumulator -> CheckResult
+isDirect candidate typesAcc =
+  let directChar = head candidate
+      indirectValue = tail candidate
+      (indirectRes, indirectTypes) = isIndirect indirectValue typesAcc
+  in if directChar == '%' && indirectRes -- || label || value? -- && (candidate !! 1) /= ':'
+     then resolve $ addDirect indirectTypes
+     else reject typesAcc
 
 -- FIXME : how are indirect and label related?
 --         can we separate the test completely?
 --
---  [label | value]
-isIndirect candidate types =
+--  [ label | value ]
+isIndirect :: ArgContent -> ArgTypeAccumulator -> CheckResult
+isIndirect candidate typesAcc =
   if (headRes)
   then trace ("LABEL ADDED: " ++ (show headTypes)) (headRes, headTypes)
   else if (tailRes)
-       then trace ("NO LABEL FOUND: " ++ (show value)) (tailRes, addIndirect types value)
-       else (False, types)
-  where (headRes, headTypes) = isLabel candidate types
+       then trace ("NO LABEL FOUND: " ++ (show value)) (tailRes, addIndirect typesAcc value)
+       else (False, typesAcc)
+  where (headRes, headTypes) = isLabel candidate typesAcc
         (tailRes, value) = parseNum candidate
 
 -- ':' #id
-isLabel candidate types = (headRes && tailRes, addLabelCall types value)
-  where headRes = head candidate == ':'
-        (tailRes, value) = parseId (tail candidate)
+isLabel :: ArgContent -> ArgTypeAccumulator -> CheckResult
+isLabel candidate typesAcc =
+  let labelChar = head candidate
+      labelName = tail candidate
+  in if labelChar == ':' && (solved $ parseId labelName)
+     then resolve $ addLabelCall typesAcc labelName
+     else reject typesAcc
+
+-- checkArgTypes
 
 -- Test argument type
-checkArgType' argType arg types
- | argType == register = isRegister arg types
- | argType == indirect = isIndirect arg types
- | argType == direct = isDirect arg types
-checkArgType' _ _ types = (False, types)
+checkArgType' :: ArgContent -> ArgType -> CheckResult -> CheckResult
+checkArgType' arg argType result =
+ let (_, typesAcc) = result
+     currentResult = case argType of
+      register -> isRegister arg typesAcc
+      indirect -> isIndirect arg typesAcc
+      direct -> isDirect arg typesAcc
+     in if solved currentResult
+        then currentResult
+        else result
 
 -- Test each authorized types for one argument
-checkArgType [] _ types = (False, types)
-checkArgType [argType] arg types = checkArgType' argType arg types
+checkArgType :: ([ArgType], ArgContent) -> CheckResult -> CheckResult
+-- FIXME : this does not do a OR, do a closure?
+checkArgType (argTypes, arg) result =
+  let currentResult = foldr (checkArgType' arg) result argTypes
+  in if solved currentResult
+     then currentResult
+     else result
 
-checkArgType (headArgType:tailArgType) arg types =
-  (headRes || tailRes, if tailRes == True then tailTypes else headTypes)
-  where
-    (headRes, headTypes) = checkArgType' headArgType arg types
-    (tailRes, tailTypes) = checkArgType tailArgType arg headTypes
+-- Returns an evaluation of the res
+checkArgTypes :: Op -> [ArgContent] -> CheckResult
+checkArgTypes op args = 
+  let opArgsTypes = getArgsTypes op -- get valid typesAcc from op
+      result = foldr checkArgType (resolve []) $ zip opArgsTypes args
+  in if solved result
+     then result
+     -- FIXME : add error infos
+     else error "Argument did not match any authorized types"
 
--- Test each argument with the set of authorized types
-retrieveTypes' [argTypes] [arg] types = checkArgType argTypes arg types
-retrieveTypes' (headArgTypes:tailArgTypes) (headArg:tailArg) types =
-  (headRes && tailRes, tailTypes)
-  where
-    (headRes, headTypes) = checkArgType headArgTypes headArg types
-    (tailRes, tailTypes) = retrieveTypes' tailArgTypes tailArg headTypes
+-- END
 
-retrieveTypes' [] _ types = (False, types)
-retrieveTypes' _ [] types = (False, types)
-
-retrieveTypes op args = 
-  if validTypes
-  then (validTypes, argTypes)
-  -- FIXME : add error infos
-  else error "Argument did not match any authorized types"
-  where (validTypes, argTypes) = retrieveTypes' (getArgsTypes op) args []
-
+rightArgsNbr :: Op -> [ArgContent] -> Bool
 rightArgsNbr op args = (getNbrArgs op == argsNbr
                           || (error $ "Bad # of args for mnemonic \""
                              ++ getMnemonic op

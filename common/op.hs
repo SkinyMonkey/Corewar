@@ -13,7 +13,8 @@ module Op (
   indirect,
   label,
 -- FIXME : debug
-  opsNames
+  opsNames,
+  Op,
 ) where
 
 -- import Data.Bits
@@ -21,8 +22,8 @@ import Data.Word
 
 -- Internals definitions
 _memSize = (8 * 1024 + 717)
-_idxMod =	512
-_maxArgsNumber	=	4
+_idxMod = 512
+_maxArgsNumber = 4
 _regNumber = 16
 
 -- Asm syntax
@@ -82,40 +83,40 @@ getComment :: Op -> String
 getComment = comment
 
 byMnemonic :: String -> Op
-byMnemonic "live" = Op "live"	1	[[direct]]	1	10	"alive"		
-byMnemonic "ld" = Op "ld"	2	[[direct, indirect], [register]]	2	5	"load"		
-byMnemonic "st" =  Op "st"	2	[[register], [indirect, register]]	3	5	"store"		
-byMnemonic "add" =  Op "add"	3	[[register], [register], [register]]	4	10	"addition"	
-byMnemonic "sub" =  Op "sub"	3	[[register], [register], [register]]	5	10	"substraction"	
+byMnemonic "live" = Op "live" 1 [[direct]] 1 10 "alive"  
+byMnemonic "ld" = Op "ld" 2 [[direct, indirect], [register]] 2 5 "load"  
+byMnemonic "st" =  Op "st" 2 [[register], [indirect, register]] 3 5 "store"  
+byMnemonic "add" =  Op "add" 3 [[register], [register], [register]] 4 10 "addition" 
+byMnemonic "sub" =  Op "sub" 3 [[register], [register], [register]] 5 10 "substraction" 
 
-byMnemonic "and" =  Op "and"	3	[[register, direct, indirect],
+byMnemonic "and" =  Op "and" 3 [[register, direct, indirect],
                          [register, direct, indirect],
-                         [register]]		6	6	"bin and"	
+                         [register]]  6 6 "bin and" 
 
-byMnemonic "or" =  Op "or"	3	[[register, indirect, direct],
+byMnemonic "or" =  Op "or" 3 [[register, indirect, direct],
                        [register, indirect, direct],
-                       [register]]		7	6	"bin or"	
+                       [register]]  7 6 "bin or" 
 
-byMnemonic "xor" =  Op "xor"	3	[[register, indirect, direct],
+byMnemonic "xor" =  Op "xor" 3 [[register, indirect, direct],
                          [register, indirect, direct],
-                         [register]]		8	6	"bin xor"	
+                         [register]]  8 6 "bin xor" 
 
-byMnemonic "zjmp" =  Op "zjmp"	1	[[direct]]		9	20	"jump if zero"	
+byMnemonic "zjmp" =  Op "zjmp" 1 [[direct]]  9 20 "jump if zero" 
 
-byMnemonic "ldi" =  Op "ldi"	3	[[register, direct, indirect],
+byMnemonic "ldi" =  Op "ldi" 3 [[register, direct, indirect],
                          [direct, register],
-                         [register]]	10	25	"load index"	
-byMnemonic "sti" =  Op "sti"	3	[[register],
+                         [register]] 10 25 "load index" 
+byMnemonic "sti" =  Op "sti" 3 [[register],
                          [register, direct, indirect],
-                         [direct, register]]	11	25	"store index"	
+                         [direct, register]] 11 25 "store index" 
 
-byMnemonic "fork" =  Op "fork"	1	[[direct]]		12	800	"fork"		
-byMnemonic "lld" =  Op "lld"	2	[[direct], [indirect], [register]]	13	10	"long load"	
-byMnemonic "lldi" =  Op "lldi"	3	[[register, direct, indirect],
+byMnemonic "fork" =  Op "fork" 1 [[direct]]  12 800 "fork"  
+byMnemonic "lld" =  Op "lld" 2 [[direct], [indirect], [register]] 13 10 "long load" 
+byMnemonic "lldi" =  Op "lldi" 3 [[register, direct, indirect],
                            [direct, register],
-                           [register]]	14	50	"long load idx"	
-byMnemonic "lfork" =  Op "lfork"	1	[[direct]]		15	1000	"long fork"	
-byMnemonic "aff" =  Op "aff"	1	[[register]]		16	2	"aff"
+                           [register]] 14 50 "long load idx" 
+byMnemonic "lfork" =  Op "lfork" 1 [[direct]]  15 1000 "long fork" 
+byMnemonic "aff" =  Op "aff" 1 [[register]]  16 2 "aff"
 
 byMnemonic mnemonic = error $ "Unknown mnemonic found : " ++ mnemonic
 
