@@ -147,11 +147,12 @@ finished fileName = putStrLn $ "Generation complete for " ++ fileName
 --finished (False, cd) = putStrLn $ "Generation failed for " ++ getFileName cd
 
 generateCode' cd = do
+  let header = getHeader cd
+  in
   writeHeader header $ getFileName cd -- FIXME : take cd instead of header/fileName
   res <- writeInstructions cd
   return res
   finished $ getFileName cd
-  where header = getHeader cd
 
 -- FIXME : move to the where
 corFileName fileName = (take (length(fileName) - 2) fileName) ++ ".cor"

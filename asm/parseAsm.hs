@@ -28,7 +28,7 @@ parseMetadata _ championData = reject championData
 
 parseLabel :: String -> ChampionData -> ParseResult
 parseLabel label championData =
-  if (solved $ parseId label)
+  if (solved $ parseId $ label)
   then resolve $ addLabel championData label
   else reject championData
 parseLabel _ championData = reject championData
@@ -43,7 +43,7 @@ parseOp' candidate args championData =
   else reject $ championData
 
 splitOnCommas :: [String] -> [String]
-splitOnCommas args = concat $ map (wordsWhen (==',')) args
+splitOnCommas = concat . (map $ wordsWhen (==','))
 
 parseOp :: [String] -> ChampionData -> ParseResult
 parseOp (candidate:args) championData
@@ -60,9 +60,10 @@ parseInstruction' (token:args) championData
   | last token == ':' = parseLabel'                        -- label
   | otherwise = parseOp tokens championData                -- op
     where tokens = token:args
+          label = init token
           parseLabel' = if length (args) > 0
-                        then parseOp args $ snd $ parseLabel token championData
-                        else parseLabel token championData
+                        then parseOp args $ snd $ parseLabel label championData
+                        else parseLabel label championData
 parseInstruction' _ championData = reject championData
 
 parseInstruction :: String -> ChampionData -> ParseResult

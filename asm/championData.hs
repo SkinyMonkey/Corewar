@@ -11,6 +11,7 @@ module ChampionData (
   getLineNbr,
   getCurrentLine,
   getInstructions,
+  setInstructions,
   getByteCount,
   getLabelOffset,
   incCounter,
@@ -18,13 +19,13 @@ module ChampionData (
   ChampionData
 ) where
 
-import Header
-import Op
+-- FIXME : DEBUG
+import Debug.Trace
 import Data.Word
 import qualified Data.Map as Map  
 
--- FIXME : DEBUG
-import Debug.Trace
+import Header
+import Op
 
 getHeader :: ChampionData -> Header
 getHeader self = header self
@@ -43,6 +44,8 @@ getCurrentLine self = currentLine self
 
 getInstructions self = instructions self
 
+setInstructions self instructions = self {instructions = instructions}
+
 setCurrentLine :: ChampionData -> String -> ChampionData
 setCurrentLine self line = self {currentLine = line}
 
@@ -50,11 +53,11 @@ getByteCount :: ChampionData -> Int
 getByteCount self = byteCounter self
 
 getLabelOffset :: ChampionData -> String -> Int
-getLabelOffset self label = do
-  let offset = Map.findWithDefault 0 label (labels self) in
-    if offset == 0
-    then error $ "Used label does not exist : " ++ label
-    else offset
+getLabelOffset self label =
+  let offset = Map.findWithDefault 0 label (labels self)
+  in if offset == 0
+     then error $ "Used label does not exist : " ++ label
+     else offset
 
 incLineNbr :: ChampionData -> ChampionData
 incLineNbr self = self {lineNbr = nbr + 1}
@@ -77,14 +80,12 @@ argsByteSize code args =
 -- INFO : instruction = (code, [(parameterType, argValue)])
 addInstruction self op args =
   let code = getCode op
-      byteSize = argsByteSize code args
-      instruction = (code, args, byteSize)
+      instruction = (code, args)
       newInstructions = (instructions self)++[instruction]
-      newByteCounter = (byteCounter self) + byteSize
   in
-  self {instructions = newInstructions, byteCounter = newByteCounter }
+  incCounter (self {instructions = newInstructions}) code args
 
-addLabel _ label | trace ("addlabel: " ++ (init label)) False = undefined
+addLabel _ label | trace ("addlabel: " ++ label) False = undefined
 addLabel self label = self {labels = Map.insert label offset labelsOffsets}
   where labelsOffsets = labels self
         offset = byteCounter self
@@ -106,7 +107,7 @@ data ChampionData = ChampionData {
   currentLine :: String,
   lineNbr :: Int,
   byteCounter :: Int,
-  instructions :: [(Word8,[(ArgType, String)], Int)],
+  instructions :: [(Word8,[(ArgType, String)])],
   labels :: Map.Map String Int,
   header :: Header
 } deriving (Show)

@@ -107,9 +107,11 @@ checkArgType' arg argType result =
         then currentResult
         else result
 
+-- FIXME : replace foldr by foldl, no reason to use foldr
+
 -- Test each authorized types for one argument
 checkArgType :: ([ArgType], ArgContent) -> CheckResult -> CheckResult
--- FIXME : this does not do a OR, do a closure?
+-- FIXME : CHECK that it's effectively a OR and not an AND or worse
 checkArgType (argTypes, arg) result =
   let currentResult = foldr (checkArgType' arg) result argTypes
   in if solved currentResult
