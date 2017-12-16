@@ -3,7 +3,7 @@ module ComputeOffsets (
 )where
 
 import Data.Word
-import qualified Data.Map as Map  
+import qualified Data.Map as Map
 
 import Op
 import ChampionData

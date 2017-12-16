@@ -15,36 +15,35 @@ import Data.Bits
 -- FIXME : DEBUG
 import Debug.Trace
 
-serializeRegister register | trace ("serializeRegister :" ++ (show register)) False = undefined
-serializeRegister register = do
+serializeRegister register | trace ("serializeRegister :" ++ show register) False = undefined
+serializeRegister register =
  putWord32be register
 
-serializeDirect direct | trace ("serializeDirect :" ++ (show direct)) False = undefined
-serializeDirect direct = do
+serializeDirect direct | trace ("serializeDirect :" ++ show direct) False = undefined
+serializeDirect direct =
   putWord32be direct
 
-serializeIndirect indirect | trace ("serializeIndirect :" ++ (show indirect)) False = undefined
-serializeIndirect indirect = do
+serializeIndirect indirect | trace ("serializeIndirect :" ++ show indirect) False = undefined
+serializeIndirect indirect =
   putWord16be indirect
 
 -- FIXME : get cd, code 
 serializeLabel :: Word32 -> Put
 
-serializeLabel labelOffset | trace ("serializeLabel :" ++ (show labelOffset)) False = undefined
+serializeLabel labelOffset | trace ("serializeLabel :" ++ show labelOffset) False = undefined
 
-serializeLabel labelOffset = do
--- serializeIndirect labelOffset?
+serializeLabel labelOffset =
   putWord32be labelOffset
 
 -- FIXME : add a function to opCode's binary value
-serializeOpCode opCode | trace ("serializeOpCode :" ++ (show opCode)) False = undefined
-serializeOpCode opCode = do
+serializeOpCode opCode | trace ("serializeOpCode :" ++ show opCode) False = undefined
+serializeOpCode opCode =
  putWord8 opCode
 
 serializeInstructionCode instructionCode | trace ("serializeInstructionCode :" ++ opStr) False = undefined
 --  where opStr = (opsNames !! (fromIntegral(instructionCode) ::Int))
     where opStr = show instructionCode
-serializeInstructionCode instructionCode = do
+serializeInstructionCode instructionCode =
   putWord8 instructionCode
 
 -- 01 register
@@ -61,13 +60,13 @@ encode parameterType index
 -- generateOpCode' (_, _) : ((_, _) : ((_, _) : ((_, _) : (_ : _)))) =
 --  error "Too much parameters : this should never happen."
 
-generateOpCode' ((t1, _):(t2, _):(t3, _):(t4, _):[]) =
+generateOpCode' [(t1, _), (t2, _), (t3, _), (t4, _)] =
   encode t1 6 .|. (encode t2 4 .|. (encode t3 2 .|. encode t4 0))
-generateOpCode' ((t1, _):(t2, _):(t3, _):[]) =
+generateOpCode' [(t1, _), (t2, _), (t3, _)] =
   encode t1 6 .|. (encode t2 4 .|. encode t3 2)
-generateOpCode' ((t1, _):(t2, _):[]) =
+generateOpCode' [(t1, _), (t2, _)] =
   encode t1 6 .|. encode t2 4
-generateOpCode' ((t1, _):[]) = 
+generateOpCode' [(t1, _)] =
   encode t1 6
 
 generateOpCode' [] = error "No parameters : this should never happen."
@@ -77,13 +76,13 @@ generateOpCode instruction =
   where parameters = snd instruction
 
 generateOffset cd label = fromIntegral $ offset * (-1)
-  where offset = (getByteCount cd) - (getLabelOffset cd label)
+  where offset = getByteCount cd - getLabelOffset cd label
 
 generateParameter cd parameter
-  | parameterType == register = serializeRegister $ (read parameterValue :: Word32)
-  | parameterType == direct = serializeDirect $ (read parameterValue :: Word32)
-  | parameterType == indirect = serializeIndirect $ (read parameterValue :: Word16)
-  | parameterType == label = serializeLabel $ (generateOffset cd parameterValue :: Word32)
+  | parameterType == register = serializeRegister (read parameterValue :: Word32)
+  | parameterType == direct = serializeDirect (read parameterValue :: Word32)
+  | parameterType == indirect = serializeIndirect (read parameterValue :: Word16)
+  | parameterType == label = serializeLabel (generateOffset cd parameterValue :: Word32)
   | otherwise = error "Unknown parameter type : this should never happen."
   where parameterType = fst parameter
         parameterValue = snd parameter
@@ -91,7 +90,7 @@ generateParameter cd parameter
 -- How to apply a monad on each parameters and chain result?
 serializeParameters _ [] = error "No arguments given."
 
-serializeParameters cd [parameter] = do 
+serializeParameters cd [parameter] =
   generateParameter cd parameter
 
 serializeParameters cd (headParameter:tailParameters) = do
@@ -108,12 +107,12 @@ serializeInstructionWithoutOpCode cd instructionCode parameters = do
   serializeParameters cd parameters
 
 -- FIXME : find a way to branch instead of using multiple similare functions
-serializeInstruction cd instruction = do
-  if not $ instructionCode `elem` noOpCodeInstructions
+serializeInstruction cd instruction =
+  if notElem instructionCode noOpCodeInstructions
   then serializeInstructionWithOpCode cd instructionCode opCode parameters
   else serializeInstructionWithoutOpCode cd instructionCode parameters
   where instructionCode = fst instruction
-        opCode = (generateOpCode instruction) :: Word8
+        opCode = generateOpCode instruction :: Word8
         parameters = snd instruction
 
 writeInstruction cd instruction = do
@@ -127,20 +126,17 @@ writeInstruction cd instruction = do
         opCode = fst instruction
         args = snd instruction
 
-writeInstructions' cd [] = do return cd
-writeInstructions' cd [instruction] = do
-  res <- writeInstruction cd instruction
-  return res
+writeInstructions' cd [] = return cd
+writeInstructions' cd [instruction] =
+  writeInstruction cd instruction
 
 writeInstructions' cd (headInstruction:tailInstruction) = do
   updatedCd <- writeInstruction cd headInstruction
-  res <- writeInstructions' updatedCd tailInstruction
-  return res
+  writeInstructions' updatedCd tailInstruction
 
 -- FIXME : HERE : pass cd along from this function
-writeInstructions cd = do
-  res <- writeInstructions' cd instructions
-  return res
+writeInstructions cd =
+  writeInstructions' cd instructions
   where instructions = getInstructions cd
 
 finished fileName = putStrLn $ "Generation complete for " ++ fileName
@@ -148,17 +144,15 @@ finished fileName = putStrLn $ "Generation complete for " ++ fileName
 
 generateCode' cd = do
   let header = getHeader cd
-  in
   writeHeader header $ getFileName cd -- FIXME : take cd instead of header/fileName
   res <- writeInstructions cd
   return res
   finished $ getFileName cd
 
 -- FIXME : move to the where
-corFileName fileName = (take (length(fileName) - 2) fileName) ++ ".cor"
+corFileName fileName = take (lengthfileName - 2) fileName ++ ".cor"
 
 -- FIXME : extract progSize from cd and add it to Header
-generateCode cd = do
-  res <- generateCode' $ resetByteCounter (setFileName cd fileName)
-  return res
+generateCode cd =
+  generateCode' $ resetByteCounter (setFileName cd fileName)
   where fileName = corFileName $ getFileName cd

@@ -12,11 +12,11 @@ finished step fileName (False, _) = error $ step ++ " failed for " ++ fileName
 generateChampion fileName = do
   content <- readFile fileName
   let (_, championData) = parseChampion fileName content -- TODO : finished
-  traceIO $ show $ championData
+  traceIO $ show championData
   -- FIXME : might not be OK : offset from beginning or
   -- indirect computed from current byte count?
   let championData' = computeLabelAdressing championData
-  traceIO $ show $ championData'
+  traceIO $ show championData'
   return championData
   -- FIXME : put data into a bytestring and write the file here!
   --         use cons

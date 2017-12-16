@@ -3,53 +3,47 @@ module ParseAsm (
   parseInstruction', -- DEBUG
 ) where
 
-import Data.List
-
 import Op
 import Utils
 import ParseBase
 import CheckArgs
 import ChampionData
 
--- FIXME : DEBUG
-import Debug.Trace
-
 type ParseResult = (Bool, ChampionData)
 
 parseMetadata :: [String] -> ChampionData -> ParseResult
 parseMetadata (key:args) championData =
-  let cstring = intercalate " " args
+  let cstring = unwords args
       field = tail key -- removing the '.' char
   in
-  if (solved $ parseId field) && (parseString cstring)
+  if solved (parseId field) && parseString cstring
   then resolve $ addMetadata championData field cstring
   else reject championData
 parseMetadata _ championData = reject championData
 
 parseLabel :: String -> ChampionData -> ParseResult
 parseLabel label championData =
-  if (solved $ parseId $ label)
+  if solved $ parseId label
   then resolve $ addLabel championData label
   else reject championData
-parseLabel _ championData = reject championData
 
 parseOp' :: String -> [String] -> ChampionData -> ParseResult
 parseOp' candidate args championData =
   let op = byMnemonic candidate
       (validTypes, argTypes) = checkArgTypes op args
   in
-  if (rightArgsNbr op args championData && validTypes)
+  if rightArgsNbr op args championData && validTypes
   then resolve $ addInstruction championData op argTypes
-  else reject $ championData
+  else reject championData
 
 splitOnCommas :: [String] -> [String]
-splitOnCommas = concat . (map $ wordsWhen (==','))
+splitOnCommas = concatMap $ wordsWhen (==',')
 
 parseOp :: [String] -> ChampionData -> ParseResult
 parseOp (candidate:args) championData
-  | length(args) > 0 = parseOp' candidate (splitOnCommas args) championData
-  | length(args) == 0 =
-    error $ "No argument given to " ++ candidate ++ " line " ++ (show $ getLineNbr championData)
+  | not (null args) = parseOp' candidate (splitOnCommas args) championData
+  | null args =
+    error $ "No argument given to " ++ candidate ++ " line " ++ show (getLineNbr championData)
 parseOp _ championData = reject championData
 
 -- FIXME : how to compose parseOp with parseLabel if needed?
@@ -61,29 +55,29 @@ parseInstruction' (token:args) championData
   | otherwise = parseOp tokens championData                -- op
     where tokens = token:args
           label = init token
-          parseLabel' = if length (args) > 0
+          parseLabel' = if not (null args)
                         then parseOp args $ snd $ parseLabel label championData
                         else parseLabel label championData
 parseInstruction' _ championData = reject championData
 
 parseInstruction :: String -> ChampionData -> ParseResult
 parseInstruction line championData
-  | (length line) == 0 = resolve championData -- the line is empty
-  | (length line) > 0 = let tokens = words line
-                        in  parseInstruction' tokens championData
+  | null line = resolve championData -- the line is empty
+  | not (null line) = let tokens = words line
+                      in  parseInstruction' tokens championData
 parseInstruction _ championData = reject championData
 
 -- TODO : remove worked in favor of error accumulation
 worked :: ParseResult -> ParseResult
 worked (False, championData) =
   error $ "Syntax error \""
-  ++ (getCurrentLine championData)
+  ++ getCurrentLine championData
   ++ "\" (line "
-  ++ (show $ (getLineNbr championData) + 1) ++ ")"
+  ++ show (getLineNbr championData + 1) ++ ")"
 worked x = x
 
 parseLines' :: ParseResult -> String -> ParseResult
-parseLines' (parseRes, championData) line  = 
+parseLines' (parseRes, championData) line  =
   let updatedChampionData = incLineNbr $ setCurrentLine championData line
       currentResult = parseInstruction (trace' line) updatedChampionData
       (currentParseRes, _) = currentResult
@@ -92,7 +86,7 @@ parseLines' (parseRes, championData) line  =
               else (parseRes, updatedChampionData)
 
 parseLines :: [String] -> ChampionData -> ParseResult
-parseLines lines championData = foldl parseLines' (resolve championData) lines
+parseLines contentLines championData = foldl parseLines' (resolve championData) contentLines
 
 parseChampion :: String -> String -> ParseResult
 parseChampion fileName content =

@@ -7,9 +7,6 @@ import Op
 import ParseBase
 import ChampionData
 
--- FIXME : DEBUG
-import Debug.Trace
-
 -- ArgType : ArgType, indirect, direct, label
 -- ArgContent : Token, value
 type ArgContent = String
@@ -17,16 +14,16 @@ type ArgTypeAccumulator = [ArgType ArgContent]
 type CheckResult = (Bool, ArgTypeAccumulator)
 
 addLabelCall :: ArgTypeAccumulator -> ArgContent -> ArgTypeAccumulator
-addLabelCall self labelName = (Label labelName):self
+addLabelCall self labelName = Label labelName:self
 
 addRegister :: ArgTypeAccumulator -> ArgContent -> ArgTypeAccumulator
-addRegister self registerNumber = (Register registerNumber):self
+addRegister self registerNumber = Register registerNumber:self
 
 addIndirect :: ArgTypeAccumulator -> ArgContent -> ArgTypeAccumulator
-addIndirect self indirectValue = (Indirect indirectValue):self
+addIndirect self indirectValue = Indirect indirectValue:self
 
 addDirect :: ArgTypeAccumulator -> ArgContent -> ArgTypeAccumulator
-addDirect self directValue = (Direct directValue):self
+addDirect self directValue = Direct directValue:self
 
 -- FIXME : HERE we take the last arg of the list and use its value
 -- --> (direct, "label")
@@ -52,7 +49,7 @@ isRegister :: ArgContent -> ArgTypeAccumulator -> CheckResult
 isRegister candidate typesAcc =
   let registerChar = head candidate
       registerNumber = tail candidate
-  in if registerChar == 'r' && (solved $ parseNum registerNumber)
+  in if registerChar == 'r' && solved (parseNum registerNumber)
      then resolve $ addRegister typesAcc registerNumber
      else reject typesAcc
 
@@ -94,7 +91,7 @@ isLabel :: ArgContent -> ArgTypeAccumulator -> CheckResult
 isLabel candidate typesAcc =
   let labelChar = head candidate
       labelName = tail candidate
-  in if labelChar == ':' && (solved $ parseId labelName)
+  in if labelChar == ':' && solved (parseId labelName)
      then resolve $ addLabelCall typesAcc labelName
      else reject typesAcc
 
@@ -108,6 +105,7 @@ checkArgType' arg argType result =
       Register _ -> isRegister arg typesAcc
       Indirect _ -> isIndirect arg typesAcc
       Direct _ -> isDirect arg typesAcc
+      Label _ -> undefined -- should never happen
      in if solved currentResult
         then currentResult
         else result
@@ -125,9 +123,9 @@ checkArgType (argTypes, arg) result =
 
 -- Returns an evaluation of the res
 checkArgTypes :: Op -> [ArgContent] -> CheckResult
-checkArgTypes op args = 
+checkArgTypes op args =
   let opArgsTypes = getArgsTypes op -- get valid types from op
-      result = resolve ([])
+      result = resolve []
       endResult = foldr checkArgType result $ zip opArgsTypes args
   in if solved endResult
      then endResult
@@ -137,15 +135,14 @@ checkArgTypes op args =
 -- END
 
 rightArgsNbr :: Op -> [ArgContent] -> ChampionData -> Bool
-rightArgsNbr op args championData = (getNbrArgs op == argsNbr
-                          || (error $ "Bad # of args for mnemonic \""
+rightArgsNbr op args championData = getNbrArgs op == argsNbr
+                          || error ("Bad # of args for mnemonic \""
                              ++ getMnemonic op
                              ++ "\": "
-                             ++ (show argsNbr)
+                             ++ show argsNbr
                              ++ " instead of "
-                             ++ (show (getNbrArgs op))
+                             ++ show (getNbrArgs op)
                              ++ " in \""
                              ++ getCurrentLine championData
-                             ++ "\""
-                             ))
-  where argsNbr = length(args)
+                             ++ "\"")
+  where argsNbr = length args

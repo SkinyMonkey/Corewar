@@ -22,7 +22,7 @@ module ChampionData (
 -- FIXME : DEBUG
 import Debug.Trace
 import Data.Word
-import qualified Data.Map as Map  
+import qualified Data.Map as Map
 
 import Header
 import Op
@@ -65,7 +65,7 @@ incLineNbr self = self {lineNbr = nbr + 1}
 
 -- FIXME : use common.hs definitions, indSize etc
 argByteSize :: ArgType String -> Int
-argByteSize arg = 
+argByteSize arg =
   case arg of
     Register _ -> 4
     Direct _ -> 4
@@ -75,13 +75,13 @@ argsByteSize :: Word8 -> [ArgType String] -> Int
 argsByteSize code args =
   if code `elem` noOpCodeInstructions
   then 2 -- FIXME : correct?
-  else 2 + (foldl (+) 0 $ map argByteSize args)
+  else 2 + sum (map argByteSize args)
 
 -- INFO : instruction = (code, [(parameterType, argValue)])
 addInstruction self op args =
   let code = getCode op
       instruction = (code, args)
-      newInstructions = (instructions self)++[instruction]
+      newInstructions = instructions self++[instruction]
   in
   incCounter (self {instructions = newInstructions}) code args
 
@@ -91,8 +91,8 @@ addLabel self label = self {labels = Map.insert label offset labelsOffsets}
         offset = byteCounter self
 
 addMetadata :: ChampionData -> String -> String -> ChampionData
-addMetadata self "name" value = self {header = (setProgName (header self) value)}
-addMetadata self "comment" value = self {header = (setComment (header self) value)}
+addMetadata self "name" value = self {header = setProgName (header self) value}
+addMetadata self "comment" value = self {header = setComment (header self) value}
 addMetadata self _ _ = self
 
 resetByteCounter :: ChampionData -> ChampionData
@@ -100,7 +100,7 @@ resetByteCounter self = self {byteCounter = 0}
 
 incCounter :: ChampionData -> Word8 -> [ArgType String] -> ChampionData
 incCounter self code args =
-  self {byteCounter = (byteCounter self) + (argsByteSize code args)}
+  self {byteCounter = byteCounter self + argsByteSize code args}
 
 data ChampionData = ChampionData {
   fileName :: String,
