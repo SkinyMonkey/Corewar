@@ -5,19 +5,26 @@ import ComputeOffsets
 
 import Debug.Trace
 
-finished step fileName (True, x) = (step ++ " complete for " ++ fileName, x)
-finished step fileName (False, _) = error $ step ++ " failed for " ++ fileName
+finished fileName step (False, _) = error $ step ++ " failed for " ++ fileName
+finished fileName step (True, x) = (step ++ " complete for " ++ fileName, x)
 
---generateChampion :: String -> IO (ParseResult)
 generateChampion fileName = do
+  let finishedStep = finished fileName
   content <- readFile fileName
-  let (_, championData) = parseChampion fileName content -- TODO : finished
-  traceIO $ show championData
+
+  let parseRes = parseChampion fileName content
+      (complete, championData) = finishedStep "Parsing" parseRes
+  --traceIO $ show championData
+  putStrLn complete
+
   -- FIXME : might not be OK : offset from beginning or
   -- indirect computed from current byte count?
   let championData' = computeLabelAdressing championData
-  traceIO $ show championData'
-  return championData
+      (complete, _) = finishedStep "Label offset computing" (True, "")
+  --traceIO $ show championData'
+  putStrLn complete
+
+  return championData'
   -- FIXME : put data into a bytestring and write the file here!
   --         use cons
   --         use ByteString not ByteString.Lazy
