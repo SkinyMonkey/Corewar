@@ -13,29 +13,34 @@ import Debug.Trace
 -- ArgType : ArgType, indirect, direct, label
 -- ArgContent : Token, value
 type ArgContent = String
-type ArgTypeAccumulator = [(ArgType, ArgContent)]
+type ArgTypeAccumulator = [ArgType ArgContent]
 type CheckResult = (Bool, ArgTypeAccumulator)
 
 addLabelCall :: ArgTypeAccumulator -> ArgContent -> ArgTypeAccumulator
-addLabelCall self labelName = (Label, labelName):self
+addLabelCall self labelName = (Label labelName):self
 
 addRegister :: ArgTypeAccumulator -> ArgContent -> ArgTypeAccumulator
-addRegister self registerNumber = (Register, registerNumber):self
+addRegister self registerNumber = (Register registerNumber):self
 
 addIndirect :: ArgTypeAccumulator -> ArgContent -> ArgTypeAccumulator
-addIndirect self indirectValue = (Indirect, indirectValue):self
+addIndirect self indirectValue = (Indirect indirectValue):self
+
+addDirect :: ArgTypeAccumulator -> ArgContent -> ArgTypeAccumulator
+addDirect self directValue = (Direct directValue):self
 
 -- FIXME : HERE we take the last arg of the list and use its value
 -- --> (direct, "label")
 -- WHY ARE WE DOING THIS?
 -- AND WHY ARE WE STILL GOING IN isDirect EVEN IF WE FOUND a TYPE THAT MATCH?
 -- CHECK IF ARGTYPE == 
-addDirect :: ArgTypeAccumulator -> ArgTypeAccumulator
-addDirect self = 
-  if argType /= Label
-  then (Direct, value):(init self)
-  else self
-  where (argType, value) = last self
+--addDirect :: ArgTypeAccumulator -> ArgTypeAccumulator
+--addDirect self = 
+--  let argType = last self
+--  in case argType of
+--      Label _ -> self
+--      Register value -> (Direct value):(init self)
+--      Direct value -> (Direct value):(init self)
+--      Indirect value -> (Direct value):(init self)
 
 -- FIXME : make a generic function that check if it's a value or a label
 --         use it in direct and indirect
@@ -63,7 +68,7 @@ isDirect candidate typesAcc =
       indirectValue = tail candidate
       (indirectRes, indirectTypes) = isIndirect indirectValue typesAcc
   in if directChar == '%' && indirectRes -- || label || value? -- && (candidate !! 1) /= ':'
-     then resolve $ addDirect indirectTypes
+     then resolve $ addDirect indirectTypes indirectValue -- FIXME : ok?
      else reject typesAcc
 
 -- FIXME : how are indirect and label related?
@@ -96,13 +101,13 @@ isLabel candidate typesAcc =
 -- checkArgTypes
 
 -- Test argument type
-checkArgType' :: ArgContent -> ArgType -> CheckResult -> CheckResult
+checkArgType' :: ArgContent -> ArgType () -> CheckResult -> CheckResult
 checkArgType' arg argType result =
  let (_, typesAcc) = result
      currentResult = case argType of
-      Register -> isRegister arg typesAcc
-      Indirect -> isIndirect arg typesAcc
-      Direct -> isDirect arg typesAcc
+      Register _ -> isRegister arg typesAcc
+      Indirect _ -> isIndirect arg typesAcc
+      Direct _ -> isDirect arg typesAcc
      in if solved currentResult
         then currentResult
         else result
@@ -110,7 +115,7 @@ checkArgType' arg argType result =
 -- FIXME : replace foldr by foldl, no reason to use foldr
 
 -- Test each authorized types for one argument
-checkArgType :: ([ArgType], ArgContent) -> CheckResult -> CheckResult
+checkArgType :: ([ArgType ()], ArgContent) -> CheckResult -> CheckResult
 -- FIXME : CHECK that it's effectively a OR and not an AND or worse
 checkArgType (argTypes, arg) result =
   let currentResult = foldr (checkArgType' arg) result argTypes

@@ -86,7 +86,7 @@ parseLines' :: ParseResult -> String -> ParseResult
 parseLines' (parseRes, championData) line  = 
   let updatedChampionData = incLineNbr $ setCurrentLine championData line
       currentResult = parseInstruction (trace' line) updatedChampionData
-      (currentParseRes, championData') = currentResult
+      (currentParseRes, _) = currentResult
   in worked $ if currentParseRes
               then currentResult
               else (parseRes, updatedChampionData)
