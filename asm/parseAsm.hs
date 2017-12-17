@@ -1,7 +1,8 @@
 module ParseAsm (
   parseChampion,
-  parseInstruction', -- DEBUG
 ) where
+
+import Data.List
 
 import Op
 import Utils
@@ -27,12 +28,21 @@ parseLabel label championData =
   then resolve $ addLabel championData label
   else reject championData
 
+dropComments :: [String] -> [String]
+dropComments args = 
+  let isComment arg = any (==';') arg
+      commentIndex = findIndex isComment args
+  in case commentIndex of
+     Just index -> take index args
+     Nothing -> args
+
 parseOp' :: String -> [String] -> ChampionData -> ParseResult
 parseOp' candidate args championData =
   let op = byMnemonic candidate
-      (validTypes, argTypes) = checkArgTypes op args
+      noCommentArgs = dropComments args
+      (validTypes, argTypes) = checkArgTypes op noCommentArgs
   in
-  if rightArgsNbr op args championData && validTypes
+  if rightArgsNbr op noCommentArgs championData && validTypes
   then resolve $ addInstruction championData op argTypes
   else reject championData
 
@@ -79,7 +89,7 @@ worked x = x
 parseLines' :: ParseResult -> String -> ParseResult
 parseLines' (parseRes, championData) line  =
   let updatedChampionData = incLineNbr $ setCurrentLine championData line
-      currentResult = parseInstruction (trace' line) updatedChampionData
+      currentResult = parseInstruction line updatedChampionData
       (currentParseRes, _) = currentResult
   in worked $ if currentParseRes
               then currentResult

@@ -3,6 +3,8 @@ import ParseAsm
 import ComputeOffsets
 --import CodeGeneration
 
+import ChampionData
+
 import Debug.Trace
 
 finished fileName step (False, _) = error $ step ++ " failed for " ++ fileName
@@ -14,14 +16,14 @@ generateChampion fileName = do
 
   let parseRes = parseChampion fileName content
       (complete, championData) = finishedStep "Parsing" parseRes
-  --traceIO $ show championData
+  traceIO $ show championData
   putStrLn complete
 
   -- FIXME : might not be OK : offset from beginning or
   -- indirect computed from current byte count?
   let championData' = computeLabelAdressing championData
       (complete, _) = finishedStep "Label offset computing" (True, "")
-  --traceIO $ show championData'
+  traceIO $ show championData'
   putStrLn complete
 
   return championData'

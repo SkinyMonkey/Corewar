@@ -54,10 +54,10 @@ getByteCount self = byteCounter self
 
 getLabelOffset :: ChampionData -> String -> Int
 getLabelOffset self label =
-  let offset = Map.findWithDefault 0 label (labels self)
-  in if offset == 0
-     then error $ "Used label does not exist : " ++ label
-     else offset
+  let offset = Map.lookup label (labels self)
+  in case offset of
+      Just labelOffset -> labelOffset
+      Nothing -> error $ "Used label does not exist : " ++ label
 
 incLineNbr :: ChampionData -> ChampionData
 incLineNbr self = self {lineNbr = nbr + 1}
@@ -70,6 +70,7 @@ argByteSize arg =
     Register _ -> 4
     Direct _ -> 4
     Indirect _ -> 2
+    Label _ -> 2
 
 argsByteSize :: Word8 -> [ArgType String] -> Int
 argsByteSize code args =
