@@ -22,4 +22,4 @@ compile
 *.swp
 *.swo
 
-test*
+.stack*
