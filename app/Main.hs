@@ -7,8 +7,8 @@ import ChampionData
 
 import Debug.Trace
 
-finished fileName step (False, _) = error $ step ++ " failed for " ++ fileName
-finished fileName step (True, x) = (step ++ " complete for " ++ fileName, x)
+finished fileName step Nothing = error $ step ++ " failed for " ++ fileName
+finished fileName step (Just x)  = (step ++ " complete for " ++ fileName, x)
 
 generateChampion fileName = do
   let finishedStep = finished fileName
@@ -22,7 +22,7 @@ generateChampion fileName = do
   -- FIXME : might not be OK : offset from beginning or
   -- indirect computed from current byte count?
   let championData' = computeLabelAdressing championData
-      (complete, _) = finishedStep "Label offset computing" (True, "")
+      (complete, _) = finishedStep "Label offset computing" $ Just ""
   traceIO $ show championData'
   putStrLn complete
 
