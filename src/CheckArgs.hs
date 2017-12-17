@@ -47,9 +47,9 @@ addDirect self directValue = Direct directValue:self
 isRegister :: ArgContent -> ArgTypeAccumulator -> CheckResult
 isRegister candidate typesAcc =
   let registerChar = head candidate
-      registerNumber = tail candidate
-  in if registerChar == 'r' && solved (parseNum registerNumber)
-     then resolve $ addRegister typesAcc registerNumber
+      registerNumber = parseNum $ tail candidate
+  in if registerChar == 'r' && msolved registerNumber
+     then resolve $ addRegister typesAcc (fromJust registerNumber)
      else reject typesAcc
 
 -- Direct : The character DIRECT_CHAR followed by a value or a label (preceded
@@ -79,9 +79,9 @@ isIndirect candidate typesAcc =
   let labelResult = isLabel candidate typesAcc
   in if solved labelResult
      then labelResult
-     else let (indirectRes, value) = parseNum candidate
-          in if indirectRes
-             then resolve $ addIndirect typesAcc value
+     else let indirectRes = parseNum candidate
+          in if msolved indirectRes
+             then resolve $ addIndirect typesAcc (fromJust indirectRes)
              else reject typesAcc
 
 -- Label : id precedeed by LABEL_CHAR
@@ -89,9 +89,9 @@ isIndirect candidate typesAcc =
 isLabel :: ArgContent -> ArgTypeAccumulator -> CheckResult
 isLabel candidate typesAcc =
   let labelChar = head candidate
-      labelName = tail candidate
-  in if labelChar == ':' && solved (parseId labelName)
-     then resolve $ addLabelCall typesAcc labelName
+      labelName = parseId $ tail candidate
+  in if labelChar == ':' && msolved labelName
+     then resolve $ addLabelCall typesAcc (fromJust labelName)
      else reject typesAcc
 
 -- checkArgTypes

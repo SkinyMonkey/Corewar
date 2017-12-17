@@ -14,18 +14,20 @@ type ParseResult = (Bool, ChampionData)
 parseMetadata :: [String] -> ChampionData -> ParseResult
 parseMetadata (key:args) championData =
   let cstring = unwords args
-      field = tail key -- removing the '.' char
+      field = parseId $ tail key -- removing the '.' char
+      stringContent = parseString cstring
   in
-  if solved (parseId field) && parseString cstring
-  then resolve $ addMetadata championData field cstring
+  if msolved field && msolved stringContent
+  then resolve $ addMetadata championData (fromJust field) (fromJust stringContent)
   else reject championData
 parseMetadata _ championData = reject championData
 
 parseLabel :: String -> ChampionData -> ParseResult
-parseLabel label championData =
-  if solved $ parseId label
-  then resolve $ addLabel championData label
-  else reject championData
+parseLabel token championData =
+  let label = parseId token
+  in if msolved label
+     then resolve $ addLabel championData (fromJust label)
+     else reject championData
 
 dropComments :: [String] -> [String]
 dropComments args = 

@@ -77,6 +77,10 @@ addMetadata self "name" value = self {header = setProgName (header self) value}
 addMetadata self "comment" value = self {header = setComment (header self) value}
 addMetadata self _ _ = self
 
+getProgName :: ChampionData -> String
+getProgName self = progName header
+  where header = getHeader self
+
 resetByteCounter :: ChampionData -> ChampionData
 resetByteCounter self = self {byteCounter = 0}
 

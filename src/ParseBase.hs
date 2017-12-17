@@ -17,15 +17,31 @@ identifierChar c = (((ord c >= ord 'a') && (ord c <= ord 'z')) || c == '_') || n
 numChar :: Char -> Bool
 numChar c = (ord c >= ord '0') && (ord c <= ord '9')
 
-parseNum :: String -> (Bool, String)
+parseNum :: String -> Maybe String
 parseNum candidate
   | head candidate == '-' =
-    (not (any (not . numChar) (tail candidate)), candidate)
+    if (not (any (not . numChar) (tail candidate)))
+    then Just candidate
+    else Nothing
   | otherwise =
-    (not (any (not . numChar) candidate), candidate)
+    if (not (any (not . numChar) candidate))
+    then Just candidate
+    else Nothing
 
-parseId :: String -> (Bool, String)
-parseId candidate = (not (any ( not . identifierChar) candidate), candidate)
+parseId :: String -> Maybe String
+parseId candidate =
+  if not (any ( not . identifierChar) candidate)
+  then Just candidate
+  else Nothing
+
+-- FIXME : find a more elegant solution
+solve check value =
+  if check value
+  then Just value
+  else Nothing
+
+msolved :: Maybe a -> Bool
+msolved = isJust
 
 solved :: (a, b) -> a
 solved = fst
