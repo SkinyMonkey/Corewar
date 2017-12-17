@@ -21,6 +21,9 @@ description:         Please see the README on Github at <https://github.com/skin
 
 dependencies:
 - base >= 4.7 && < 5
+- binary
+- bytestring
+- containers
 
 library:
   source-dirs: src
@@ -33,6 +36,9 @@ executables:
     - -threaded
     - -rtsopts
     - -with-rtsopts=-N
+    - -Wall
+    - -Wextra
+    - -O3
     dependencies:
     - corewar
 

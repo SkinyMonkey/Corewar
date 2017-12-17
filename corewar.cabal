@@ -2,7 +2,7 @@
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 36e955a8ea54512eb792c81e58d733dceeb824e89c6282dd6e5083aca6f9f8b2
+-- hash: 409344cfebeda114a7b8f04f6c912bb7099d6ea84b0d27c162e0eb47655b8695
 
 name:           corewar
 version:        0.1.0.0
@@ -30,31 +30,33 @@ library
   hs-source-dirs:
       src
   build-depends:
-      base >=4.7 && <5,
-      binary,
-      bytestring,
-      containers
+      base >=4.7 && <5
+    , binary
+    , bytestring
+    , containers
   exposed-modules:
       ChampionData
       CheckArgs
---      CodeGeneration
       ComputeOffsets
+      Header
+      Op
       ParseAsm
       ParseBase
-      Op
-      Header
       Utils
   other-modules:
       Paths_corewar
   default-language: Haskell2010
 
-executable asm
+executable corewar-exe
   main-is: Main.hs
   hs-source-dirs:
       app
-  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N -Wall -Wextra -O3
   build-depends:
       base >=4.7 && <5
+    , binary
+    , bytestring
+    , containers
     , corewar
   other-modules:
       Paths_corewar
@@ -68,6 +70,9 @@ test-suite corewar-test
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       base >=4.7 && <5
+    , binary
+    , bytestring
+    , containers
     , corewar
   other-modules:
       Paths_corewar
