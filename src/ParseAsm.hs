@@ -1,8 +1,7 @@
-module ParseAsm (
-  parseChampion,
-) where
+module ParseAsm where
 
 import Data.List
+import Data.Maybe
 
 import Op
 import Utils

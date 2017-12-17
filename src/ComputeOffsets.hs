@@ -1,6 +1,4 @@
-module ComputeOffsets (
-  computeLabelAdressing
-)where
+module ComputeOffsets where
 
 import Data.Word
 import qualified Data.Map as Map

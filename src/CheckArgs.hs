@@ -1,7 +1,6 @@
-module CheckArgs (
-  rightArgsNbr,
-  checkArgTypes
-) where
+module CheckArgs where
+
+import Data.Maybe
 
 import Op
 import ParseBase

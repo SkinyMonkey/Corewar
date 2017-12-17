@@ -1,16 +1,15 @@
-module ParseBase (
-  parseString,
-  parseNum,
-  parseId,
-  resolve,
-  reject,
-  solved,
-) where
+module ParseBase where
 
+import Data.Maybe
 import Data.Char
+import Utils
 
-parseString :: String -> Bool
-parseString token = (head token == '"') && (last token == '"')
+parseString :: String -> Maybe String
+parseString token =
+  let stringContent = slice 1 ((length token) - 1) token
+  in if (head token == '"') && (last token == '"')
+     then Just stringContent
+     else Nothing
 
 identifierChar :: Char -> Bool
 identifierChar c = (((ord c >= ord 'a') && (ord c <= ord 'z')) || c == '_') || numChar c

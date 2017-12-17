@@ -1,18 +1,4 @@
-module Op (
-  byMnemonic,
-  byCode,
-  getMnemonic,
-  getNbrArgs,
-  getArgsTypes,
-  getCode,
-  getNbrCycles,
-  getComment,
-  noOpCodeInstructions,
-  ArgType(..),
--- FIXME : debug
-  opsNames,
-  Op,
-) where
+module Op where
 
 -- import Data.Bits
 import Data.Word

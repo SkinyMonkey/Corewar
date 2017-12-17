@@ -1,10 +1,4 @@
-module Header (
-  writeHeader,
-  setProgName,
-  setComment,
-  newHeader,
-  Header
-) where
+module Header where
 
 import qualified Data.ByteString.Lazy as BL
 import qualified Data.ByteString.Char8 as B

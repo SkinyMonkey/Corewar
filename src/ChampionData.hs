@@ -1,23 +1,4 @@
-module ChampionData (
-  newChampionData,
-  addLabel,
-  addMetadata,
-  addInstruction,
-  incLineNbr,
-  setCurrentLine,
-  getHeader,
-  getFileName,
-  setFileName,
-  getLineNbr,
-  getCurrentLine,
-  getInstructions,
-  setInstructions,
-  getByteCount,
-  getLabelOffset,
-  incCounter,
-  resetByteCounter,
-  ChampionData
-) where
+module ChampionData where
 
 -- FIXME : DEBUG
 import Debug.Trace

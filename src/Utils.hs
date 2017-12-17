@@ -1,6 +1,8 @@
-module Utils (wordsWhen, trace') where
+module Utils where
 
 import Debug.Trace
+
+slice from to str = drop from $ take to str
 
 trace' x = trace ("$>" ++ show x) x
 
