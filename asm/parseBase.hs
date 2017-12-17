@@ -1,21 +1,38 @@
 module ParseBase (
   parseString,
   parseNum,
-  parseId
+  parseId,
+  resolve,
+  reject,
+  solved,
 ) where
 
 import Data.Char
 
+parseString :: String -> Bool
 parseString token = (head token == '"') && (last token == '"')
 
-identifierChar c = (((ord(c) >= ord('a')) && (ord(c) <= ord('z'))) || c == '_') || numChar c
+identifierChar :: Char -> Bool
+identifierChar c = (((ord c >= ord 'a') && (ord c <= ord 'z')) || c == '_') || numChar c
 
-numChar c = ((ord(c) >= ord('0')) && (ord(c) <= ord('9')))
+numChar :: Char -> Bool
+numChar c = (ord c >= ord '0') && (ord c <= ord '9')
 
+parseNum :: String -> (Bool, String)
 parseNum candidate
-  | head candidate == '-' = length(filter (not . numChar) $ tail candidate) == 0
-  | otherwise = length(filter (not . numChar) candidate) == 0
+  | head candidate == '-' =
+    (not (any (not . numChar) (tail candidate)), candidate)
+  | otherwise =
+    (not (any (not . numChar) candidate), candidate)
 
-parseId candidate = length(filter ( not . identifierChar) candidate) == 0
+parseId :: String -> (Bool, String)
+parseId candidate = (not (any ( not . identifierChar) candidate), candidate)
 
+solved :: (a, b) -> a
+solved = fst
 
+resolve :: a -> (Bool, a)
+resolve x = (True, x)
+
+reject :: a -> (Bool, a)
+reject x = (False, x)

@@ -1,51 +1,42 @@
-import System.IO
 import System.Environment (getArgs)
-import Data.List
-
-import Op
-import Utils
-import ParseBase
 import ParseAsm
-import CheckArgs
+import ComputeOffsets
+--import CodeGeneration
 
-parseOp' candidate args = rightArgsNbr op args && rightTypes op args
-  where op = byMnemonic candidate
+import ChampionData
 
-parseOp candidate args
-  | length(args) > 0 = parseOp' candidate (wordsWhen (==',') $ head args)
-  | length(args) == 0 = error "No argument given"
+import Debug.Trace
 
-parseInstruction' (token:args)
-  | head token == '#' = True
-  | head token == '.' = parseMetadata token $ intercalate "" args
-  | last token == ':' = parseLabel token && ((length(args) > 0 && (parseOp (head args) (tail args))) || True)
-  | otherwise = parseOp token args
+finished fileName step (False, _) = error $ step ++ " failed for " ++ fileName
+finished fileName step (True, x) = (step ++ " complete for " ++ fileName, x)
 
-parseInstruction tokens
-  | (length tokens) > 0 = parseInstruction' tokens
-  | (length tokens) == 0 = True
+generateChampion fileName = do
+  let finishedStep = finished fileName
+  content <- readFile fileName
 
-worked index line True = putStr ""
-worked index line False = putStrLn $ "Syntax error \"" ++ line ++ "\" (line " ++ (show $ index + 1) ++ ")"
+  let parseRes = parseChampion fileName content
+      (complete, championData) = finishedStep "Parsing" parseRes
+  traceIO $ show championData
+  putStrLn complete
 
--- FIXME : redefine with guards checking for empty list and use tail
-parseLine' lines index
-  | index < length(lines) = do
-      let line = lines !! index in
-        worked index line $ parseInstruction $ words line
-      parseLine' lines (index + 1)
-  | index == length(lines) = putStrLn "Syntax OK"
+  -- FIXME : might not be OK : offset from beginning or
+  -- indirect computed from current byte count?
+  let championData' = computeLabelAdressing championData
+      (complete, _) = finishedStep "Label offset computing" (True, "")
+  traceIO $ show championData'
+  putStrLn complete
 
-parseLine lines =
-  parseLine' lines 0
-
-parseChampion fileName = do
-  championFile <- openFile fileName ReadMode
-  content <- hGetContents championFile
-  parseLine $ lines content
-  hClose championFile
+  return championData'
+  -- FIXME : put data into a bytestring and write the file here!
+  --         use cons
+  --         use ByteString not ByteString.Lazy
+  --         recheck page on bytstrings
+--  binaryCode = generateCode championData offsets -- TODO : finished
+--  writeFile corFileName
+--  where corFileName = (take (length(fileName) - 2) fileName) ++ ".cor"
 
 main :: IO ()
 main = do
         args <- getArgs
-        mapM_ parseChampion args
+        mapM_ generateChampion args
+        putStrLn "End"
