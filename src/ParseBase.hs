@@ -7,18 +7,23 @@ import Utils
 parseString :: String -> Maybe String
 parseString token =
   let stringContent = slice 1 ((length token) - 1) token
-  in if (head token == '"') && (last token == '"')
+      isEmpty = length stringContent == 0
+  in if not isEmpty && head token == '"' && last token == '"'
      then Just stringContent
      else Nothing
 
-identifierChar :: Char -> Bool
-identifierChar c = (((ord c >= ord 'a') && (ord c <= ord 'z')) || c == '_') || numChar c
+alphaChar :: Char -> Bool
+alphaChar c = ((ord c >= ord 'a') && (ord c <= ord 'z'))
 
 numChar :: Char -> Bool
 numChar c = (ord c >= ord '0') && (ord c <= ord '9')
 
+identifierChar :: Char -> Bool
+identifierChar c = alphaChar c || numChar c || c == '_'
+
 parseNum :: String -> Maybe String
 parseNum candidate
+  | candidate == "" = Nothing
   | head candidate == '-' =
     if (not (any (not . numChar) (tail candidate)))
     then Just candidate
@@ -29,10 +34,12 @@ parseNum candidate
     else Nothing
 
 parseId :: String -> Maybe String
+parseId "" = Nothing
 parseId candidate =
-  if not (any ( not . identifierChar) candidate)
-  then Just candidate
-  else Nothing
+  let (c:cs) = candidate
+  in if alphaChar c && not (any ( not . identifierChar) cs)
+     then Just candidate
+     else Nothing
 
 -- FIXME : find a more elegant solution
 solve check value =

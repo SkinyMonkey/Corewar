@@ -31,7 +31,7 @@ data Header = Header {
   progName :: String,
   progSize :: Word32,
   comment :: String
-} deriving (Show)
+} deriving (Show, Eq)
 
 setProgName :: Header -> String -> Header
 setProgName self value = self {progName = value}

@@ -2,7 +2,7 @@
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 409344cfebeda114a7b8f04f6c912bb7099d6ea84b0d27c162e0eb47655b8695
+-- hash: 9c68f8ef6419a730c2ed922d92dd3990b6926e25d44c2b80a4878cee304d72d0
 
 name:           corewar
 version:        0.1.0.0
@@ -74,6 +74,9 @@ test-suite corewar-test
     , bytestring
     , containers
     , corewar
+    , hspec
   other-modules:
+      CheckArgsSpec
+      ParseAsmSpec
       Paths_corewar
   default-language: Haskell2010

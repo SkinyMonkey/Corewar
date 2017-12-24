@@ -1,16 +1,8 @@
-import ParseAsm
-import ChampionData
-
-championData = newChampionData "test"
-
-parseMetadataOk = 
-  let instruction = words ".name \"test\""
-      (result, championData') = parseMetadata instruction championData
-  in (result, getProgName championData')
-
---testParseMetatada =
+import Test.Hspec
+import CheckArgsSpec
+import ParseAsmSpec
 
 main :: IO ()
-main = do
-  let result = parseMetadataOk
-  putStrLn $ show result
+main = hspec $ do
+  testCheckArgs
+  testParseAsm

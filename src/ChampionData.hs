@@ -67,7 +67,6 @@ addInstruction self op args =
   in
   incCounter (self {instructions = newInstructions}) code args
 
-addLabel _ label | trace ("addlabel: " ++ label) False = undefined
 addLabel self label = self {labels = Map.insert label offset labelsOffsets}
   where labelsOffsets = labels self
         offset = byteCounter self
@@ -96,7 +95,7 @@ data ChampionData = ChampionData {
   instructions :: [(Word8, [ArgType String])],
   labels :: Map.Map String Int,
   header :: Header
-} deriving (Show)
+} deriving (Show, Eq)
 
 newChampionData :: String -> ChampionData
 newChampionData fileName = ChampionData {

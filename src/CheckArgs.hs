@@ -6,142 +6,125 @@ import Op
 import ParseBase
 import ChampionData
 
--- ArgType : ArgType, indirect, direct, label
--- ArgContent : Token, value
 type ArgContent = String
 type ArgTypeAccumulator = [ArgType ArgContent]
-type CheckResult = (Bool, ArgTypeAccumulator)
-
-addLabelCall :: ArgTypeAccumulator -> ArgContent -> ArgTypeAccumulator
-addLabelCall self labelName = Label labelName:self
-
-addRegister :: ArgTypeAccumulator -> ArgContent -> ArgTypeAccumulator
-addRegister self registerNumber = Register registerNumber:self
-
-addIndirect :: ArgTypeAccumulator -> ArgContent -> ArgTypeAccumulator
-addIndirect self indirectValue = Indirect indirectValue:self
-
-addDirect :: ArgTypeAccumulator -> ArgContent -> ArgTypeAccumulator
-addDirect self directValue = Direct directValue:self
-
--- FIXME : HERE we take the last arg of the list and use its value
--- --> (direct, "label")
--- WHY ARE WE DOING THIS?
--- AND WHY ARE WE STILL GOING IN isDirect EVEN IF WE FOUND a TYPE THAT MATCH?
--- CHECK IF ARGTYPE == 
---addDirect :: ArgTypeAccumulator -> ArgTypeAccumulator
---addDirect self = 
---  let argType = last self
---  in case argType of
---      Label _ -> self
---      Register value -> (Direct value):(init self)
---      Direct value -> (Direct value):(init self)
---      Indirect value -> (Direct value):(init self)
-
--- FIXME : make a generic function that check if it's a value or a label
---         use it in direct and indirect
+-- FIXME:
+-- type CheckResult = Either String ArgTypeAccumulator?
+-- or
+-- type CheckResult = Maybe String
+-- -> where is error needed?
+-- type CheckResult = (Bool, ArgTypeAccumulator)
+type CheckResult = Maybe ArgTypeAccumulator
 
 -- Register : r1 <–> rx with x = REG_NUMBER
 -- Example : ld r1,r2 (load r1 in r2)
 -- 'r' #num
 isRegister :: ArgContent -> ArgTypeAccumulator -> CheckResult
 isRegister candidate typesAcc =
-  let registerChar = head candidate
-      registerNumber = parseNum $ tail candidate
-  in if registerChar == 'r' && msolved registerNumber
-     then resolve $ addRegister typesAcc (fromJust registerNumber)
-     else reject typesAcc
-
--- Direct : The character DIRECT_CHAR followed by a value or a label (preceded
--- by LABEL_CHARS), which represents a direct value.
--- Example : ld $4,r5 (load 4 in r5)
--- Example : ld %:label, r7 (load label in r7)
--- '%' [ label | value ]
--- FIXME : should call isLabel?
-isDirect :: ArgContent -> ArgTypeAccumulator -> CheckResult
-isDirect candidate typesAcc =
-  let directChar = head candidate
-      indirectValue = tail candidate
-      (indirectRes, indirectTypes) = isIndirect indirectValue typesAcc
-  in if directChar == '%' && indirectRes -- || label || value? -- && (candidate !! 1) /= ':'
-     then resolve $ addDirect indirectTypes indirectValue -- FIXME : ok?
-     else reject typesAcc
-
--- FIXME : how are indirect and label related?
---         can we separate the test completely?
-
--- Indirect : A value or a label which represents the
--- value contained at the address of the parameter, relative to the PC.
--- Example : ld 4,r5 (load the 4 bytes at address (4+PC) in r5).
--- [value | label]
-isIndirect :: ArgContent -> ArgTypeAccumulator -> CheckResult
-isIndirect candidate typesAcc =
-  let labelResult = isLabel candidate typesAcc
-  in if solved labelResult
-     then labelResult
-     else let indirectRes = parseNum candidate
-          in if msolved indirectRes
-             then resolve $ addIndirect typesAcc (fromJust indirectRes)
-             else reject typesAcc
+  let (c:cs) = candidate
+      registerNumber = parseNum $ cs
+  in if c == 'r' && length cs > 0 && msolved registerNumber
+     then Just $ typesAcc ++ [Register (fromJust registerNumber)]
+     else Nothing
 
 -- Label : id precedeed by LABEL_CHAR
 -- ':' #id
 isLabel :: ArgContent -> ArgTypeAccumulator -> CheckResult
 isLabel candidate typesAcc =
-  let labelChar = head candidate
-      labelName = parseId $ tail candidate
-  in if labelChar == ':' && msolved labelName
-     then resolve $ addLabelCall typesAcc (fromJust labelName)
-     else reject typesAcc
+  let (c:cs) = candidate
+      labelName = parseId cs
+  in if c == ':' && msolved labelName
+     then Just $ typesAcc ++ [Label (fromJust labelName)]
+     else Nothing
+
+getArgValue :: ArgType ArgContent -> ArgContent
+getArgValue (Label value) = value
+
+argIsLabel :: ArgType ArgContent -> Bool
+argIsLabel (Label _) = True
+argIsLabel _         = False
+
+-- Direct : The character DIRECT_CHAR followed by a value or a label,
+-- which represents a direct value.
+-- Example : ld $4,r5 (load 4 in r5)
+-- Example : ld %:label, r7 (load label in r7)
+-- '%' [ label | value ]
+isDirect :: ArgContent -> ArgTypeAccumulator -> CheckResult
+isDirect candidate typesAcc =
+  let (c:cs) = candidate
+      result = isIndirect cs []
+      directValue = parseNum cs
+  in if c == '%'
+     then if isJust result && argIsLabel (last $ fromJust result)  -- We get the evaluated label
+          then Just $ typesAcc ++ [last $ fromJust result]
+          else if msolved directValue -- direct value
+               then Just $ typesAcc ++ [Direct (fromJust directValue)]
+               else Nothing
+     else Nothing
+
+-- Indirect : A value or a label which represents the
+-- value contained at the address of the parameter, relative to the PC.
+-- Example : ld 4,r5 (load the 4 bytes at address (4+PC) in r5).
+-- [ label | value ]
+isIndirect :: ArgContent -> ArgTypeAccumulator -> CheckResult
+isIndirect candidate typesAcc =
+  let labelResult = isLabel candidate typesAcc
+      indirectRes = parseNum candidate
+  in if msolved labelResult
+     then labelResult
+     else if msolved indirectRes
+          then Just $ typesAcc ++ [Indirect (fromJust indirectRes)]
+          else Nothing
 
 -- checkArgTypes
 
 -- Test argument type
-checkArgType' :: ArgContent -> ArgType () -> CheckResult -> CheckResult
-checkArgType' arg argType result =
- let (_, typesAcc) = result
-     currentResult = case argType of
+checkArgType' :: ArgContent -> ArgType () -> ArgTypeAccumulator -> ArgTypeAccumulator
+checkArgType' arg argType typesAcc =
+ let currentResult = case argType of
       Register _ -> isRegister arg typesAcc
       Indirect _ -> isIndirect arg typesAcc
       Direct _ -> isDirect arg typesAcc
       Label _ -> undefined -- should never happen
-     in if solved currentResult
-        then currentResult
-        else result
+     in if msolved currentResult
+        then fromJust currentResult
+        else typesAcc
 
 -- FIXME : replace foldr by foldl, no reason to use foldr
 
 -- Test each authorized types for one argument
-checkArgType :: ([ArgType ()], ArgContent) -> CheckResult -> CheckResult
--- FIXME : CHECK that it's effectively a OR and not an AND or worse
-checkArgType (argTypes, arg) result =
-  let currentResult = foldr (checkArgType' arg) result argTypes
-  in if solved currentResult
-     then currentResult
-     else result
-
--- Returns an evaluation of the res
-checkArgTypes :: Op -> [ArgContent] -> CheckResult
-checkArgTypes op args =
-  let opArgsTypes = getArgsTypes op -- get valid types from op
-      result = resolve []
-      endResult = foldr checkArgType result $ zip opArgsTypes args
-  in if solved endResult
+checkArgType :: Int -> ([ArgType ()], ArgContent) -> ArgTypeAccumulator -> ArgTypeAccumulator
+checkArgType opArgsNbr (argTypes, arg) result =
+  let endResult = foldr (checkArgType' arg) result argTypes
+  in if length endResult == opArgsNbr
      then endResult
      -- FIXME : add error infos
-     else error "Argument did not match any authorized types"
+     else error $ "Argument did not match any authorized types : " ++
+                  show arg ++
+                  " -> " ++
+                  show argTypes ++
+                  " -> " ++
+                  show endResult
+
+-- Returns an evaluation of the res
+checkArgTypes :: Op -> [ArgContent] -> ArgTypeAccumulator
+checkArgTypes op args =
+  let opArgsTypes = getArgsTypes op -- get valid types from op
+      opArgsNbr = getNbrArgs op
+  in  foldr (checkArgType opArgsNbr) [] $ zip opArgsTypes args
 
 -- END
 
 rightArgsNbr :: Op -> [ArgContent] -> ChampionData -> Bool
-rightArgsNbr op args championData = getNbrArgs op == argsNbr
+rightArgsNbr op args championData = opArgsNbr == argsNbr
                           || error ("Bad # of args for mnemonic \""
                              ++ getMnemonic op
                              ++ "\": "
                              ++ show argsNbr
                              ++ " instead of "
-                             ++ show (getNbrArgs op)
+                             ++ show opArgsNbr
                              ++ " in \""
                              ++ getCurrentLine championData
                              ++ "\"")
   where argsNbr = length args
+        opArgsNbr = getNbrArgs op
