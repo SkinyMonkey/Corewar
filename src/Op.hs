@@ -24,6 +24,8 @@ _indSize = 2
 _regSize = 4
 _dirSize = _regSize
 
+type Offset = Int
+
 -- Op arguments types
 
 data ArgType a = Register a | Direct a | Indirect a | Label a deriving (Show, Eq)

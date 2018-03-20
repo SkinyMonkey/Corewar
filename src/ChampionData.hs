@@ -62,7 +62,8 @@ argsByteSize code args =
 -- INFO : instruction = (code, [(parameterType, argValue)])
 addInstruction self op args =
   let code = getCode op
-      instruction = (code, args)
+      offset = getByteCount self
+      instruction = (code, args, offset)
       newInstructions = instructions self++[instruction]
   in
   incCounter (self {instructions = newInstructions}) code args
@@ -92,7 +93,7 @@ data ChampionData = ChampionData {
   currentLine :: String,
   lineNbr :: Int,
   byteCounter :: Int,
-  instructions :: [(Word8, [ArgType String])],
+  instructions :: [(Word8, [ArgType String], Offset)],
   labels :: Map.Map String Int,
   header :: Header
 } deriving (Show, Eq)

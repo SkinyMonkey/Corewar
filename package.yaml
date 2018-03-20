@@ -29,7 +29,7 @@ library:
   source-dirs: src
 
 executables:
-  corewar-exe:
+  asm:
     main:                Main.hs
     source-dirs:         app
     ghc-options:
@@ -43,7 +43,7 @@ executables:
     - corewar
 
 tests:
-  corewar-test:
+  asm-test:
     main:                Spec.hs
     source-dirs:         test
     ghc-options:
@@ -53,3 +53,4 @@ tests:
     dependencies:
     - corewar
     - hspec
+    - QuickCheck

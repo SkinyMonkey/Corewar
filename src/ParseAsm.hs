@@ -1,5 +1,6 @@
 module ParseAsm where
 
+import Data.Char (isSpace)
 import Data.List
 import Data.Maybe
 
@@ -31,11 +32,11 @@ parseLabel token championData =
   let label = parseId $ init token -- removing the ':' char
   in if last token == ':' && msolved label
      then Just $ addLabel championData (fromJust label)
-     else Nothing
+     else Nothing -- FIXME : Nothing? or championData, as in 'untouched'?
 
 dropComments :: [String] -> [String]
 dropComments args = 
-  let isComment arg = any (==';') arg
+  let isComment arg = any (==';') arg || any (=='#') arg
       commentIndex = findIndex isComment args
   in if isJust commentIndex
      then take (fromJust commentIndex) args
@@ -44,20 +45,20 @@ dropComments args =
 parseOp :: [String] -> ChampionData -> ParseResult
 parseOp (candidate:args) championData =
   let op = byMnemonic candidate
-      noCommentArgs = dropComments args
-      argTypes = checkArgTypes op noCommentArgs
-  in if rightArgsNbr op noCommentArgs championData -- FIXME : finish
+      argTypes = checkArgTypes op args
+  in if rightArgsNbr op args championData -- FIXME : finish
      then Just $ addInstruction championData op argTypes
      else Nothing
 
 splitOnCommas :: [String] -> [String]
 splitOnCommas = concatMap $ wordsWhen (==',')
 
+-- TODO : remove the # guard
 -- TODO : split into if thens?
 -- les clean to read but better code
-parseInstruction' :: [String] -> ChampionData -> ParseResult
-parseInstruction' (token:args) championData
-  | head token == '#' = Just championData                  -- comment
+parseInstruction :: [String] -> ChampionData -> ParseResult
+parseInstruction (token:args) championData
+--  | head token == '#' = Just championData                  -- comment
   | head token == '.' = parseMetadata tokens championData  -- metadata
   | last token == ':' = parseLabel'                        -- label
   | otherwise = parseOp tokens championData                -- op
@@ -66,13 +67,6 @@ parseInstruction' (token:args) championData
           parseLabel' = if not (null args')
                         then parseOp args' $ fromJust $ parseLabel token championData
                         else parseLabel token championData
-parseInstruction' [] _ = Nothing
-
-parseInstruction :: String -> ChampionData -> ParseResult
-parseInstruction line championData
-  | null line = Just championData -- the line is empty
-  | not (null line) = let tokens = words line
-                      in  parseInstruction' tokens championData
 parseInstruction [] _ = Nothing
 
 -- TODO : remove worked in favor of error accumulation?
@@ -87,7 +81,11 @@ worked (Just championData) Nothing = -- default one with line updated
 parseLine :: ParseResult -> String -> ParseResult
 parseLine (Just championData) line  =
   let updatedChampionData = incLineNbr $ setCurrentLine championData line
-      currentResult = parseInstruction line updatedChampionData
+      cleanedLine = ( dropComments . words ) line
+      currentResult = if ((not . null) $ unwords cleanedLine) &&
+                         ((not . empty) $ unwords cleanedLine)
+                      then parseInstruction cleanedLine updatedChampionData
+                      else Just updatedChampionData
   in worked (Just updatedChampionData) currentResult
 
 parseLines :: [String] -> ChampionData -> ParseResult

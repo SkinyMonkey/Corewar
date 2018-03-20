@@ -17,8 +17,8 @@ computeArgLabelOffset championData arg =
      Label labelName -> Indirect $ show $ getLabelOffset championData labelName
      _ -> arg
 
-computeArgsLabelOffset :: ChampionData -> (Word8, [ArgType String]) -> (Word8, [ArgType String])
-computeArgsLabelOffset championData (op, args) = (op, map (computeArgLabelOffset championData) args)
+computeArgsLabelOffset :: ChampionData -> (Word8, [ArgType String], Offset) -> (Word8, [ArgType String], Offset)
+computeArgsLabelOffset championData (op, args, offset) = (op, map (computeArgLabelOffset championData) args, offset)
 
 computeLabelAdressing :: ChampionData -> ChampionData
 computeLabelAdressing championData =

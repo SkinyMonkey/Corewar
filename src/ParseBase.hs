@@ -4,6 +4,9 @@ import Data.Maybe
 import Data.Char
 import Utils
 
+empty :: String -> Bool
+empty xs = all isSpace xs
+
 parseString :: String -> Maybe String
 parseString token =
   let stringContent = slice 1 ((length token) - 1) token

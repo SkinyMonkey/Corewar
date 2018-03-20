@@ -6,6 +6,8 @@ import Op
 import ParseBase
 import ChampionData
 
+import Utils
+
 type ArgContent = String
 type ArgTypeAccumulator = [ArgType ArgContent]
 -- FIXME:
@@ -96,15 +98,17 @@ checkArgType' arg argType typesAcc =
 checkArgType :: Int -> ([ArgType ()], ArgContent) -> ArgTypeAccumulator -> ArgTypeAccumulator
 checkArgType opArgsNbr (argTypes, arg) result =
   let endResult = foldr (checkArgType' arg) result argTypes
-  in if length endResult == opArgsNbr
+  in if length endResult > length result
      then endResult
      -- FIXME : add error infos
-     else error $ "Argument did not match any authorized types : " ++
+     else error $ "Argument did not match any authorized types :\ntoken : " ++
                   show arg ++
-                  " -> " ++
+                  " -> valid possible argTypes " ++
                   show argTypes ++
-                  " -> " ++
-                  show endResult
+                  " -> found argType " ++
+                  show endResult ++
+                  " -> result " ++
+                  show result
 
 -- Returns an evaluation of the res
 checkArgTypes :: Op -> [ArgContent] -> ArgTypeAccumulator
