@@ -10,8 +10,8 @@ import ChampionData
 
 testCheckArgs =
   describe "CheckArgs" $ do
-    let failed = Nothing
-        worked x = Just x
+    let failed x = Left x
+        worked x = Right x
         emptyResult = worked []
         championData = newChampionData "test"
 

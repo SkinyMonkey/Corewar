@@ -43,17 +43,14 @@ dropComments :: [String] -> [String]
 dropComments args = 
   let isComment arg = any (==';') arg || any (=='#') arg
       commentIndex = findIndex isComment args
-  in if isJust commentIndex
-     then take (fromJust commentIndex) args
-     else args
+  in flip fmap args $ take (fromJust commentIndex)
 
+-- ParseResultError : Either String ChampionData
 parseOp :: [String] -> ChampionData -> ParseResultError
 parseOp (candidate:args) championData =
   let op = byMnemonic candidate
-      argTypes = checkArgTypes op args
-  in if rightArgsNbr op args championData -- FIXME : finish
-     then Right $ addInstruction championData op argTypes
-     else Left "Malformed op, bad number of args" -- FIXME : return checkArgTypes result
+      argTypes = checkArgTypes op args championData
+   in flip fmap argTypes $ addInstruction championData op
 parseOp [] _ = Left "Empty line"
 
 splitOnCommas :: [String] -> [String]

@@ -1,6 +1,7 @@
 module CheckArgs where
 
 import Data.Maybe
+import Data.Either
 
 import Op
 import ParseBase
@@ -10,13 +11,8 @@ import Utils
 
 type ArgContent = String
 type ArgTypeAccumulator = [ArgType ArgContent]
--- FIXME:
--- type CheckResult = Either String ArgTypeAccumulator?
--- or
--- type CheckResult = Maybe String
--- -> where is error needed?
--- type CheckResult = (Bool, ArgTypeAccumulator)
 type CheckResult = Maybe ArgTypeAccumulator
+type CheckArgTypeResult = ([String], ArgTypeAccumulator)
 
 -- Register : r1 <–> rx with x = REG_NUMBER
 -- Example : ld r1,r2 (load r1 in r2)
@@ -94,41 +90,48 @@ checkArgType' arg argType typesAcc =
 
 -- FIXME : replace foldr by foldl, no reason to use foldr
 
+noMatchingTypeError arg argTypes endResult previousAcc = concat [
+  "Argument did not match any authorized types :\ntoken : ",
+  show arg,
+  " -> valid possible argTypes ",
+  show argTypes,
+  " -> found argType ",
+  show endResult,
+  " -> result ",
+  show previousAcc
+  ]
+
 -- Test each authorized types for one argument
-checkArgType :: Int -> ([ArgType ()], ArgContent) -> ArgTypeAccumulator -> ArgTypeAccumulator
-checkArgType opArgsNbr (argTypes, arg) result =
-  let endResult = foldr (checkArgType' arg) result argTypes
-  in if length endResult > length result
-     then endResult
+-- Accumulates types and errors
+checkArgType :: Int -> ([ArgType ()], ArgContent) -> CheckArgTypeResult -> CheckArgTypeResult
+checkArgType opArgsNbr (argTypes, arg) (errors, previousAcc) =
+  let endResult = foldr (checkArgType' arg) previousAcc argTypes
+  in if length endResult > length previousAcc
+     then (errors, endResult)
      -- FIXME : add error infos
-     else error $ "Argument did not match any authorized types :\ntoken : " ++
-                  show arg ++
-                  " -> valid possible argTypes " ++
-                  show argTypes ++
-                  " -> found argType " ++
-                  show endResult ++
-                  " -> result " ++
-                  show result
+     else let newError = noMatchingTypeError arg argTypes endResult previousAcc
+          in ( errors ++ [newError], previousAcc)
 
 -- Returns an evaluation of the res
-checkArgTypes :: Op -> [ArgContent] -> ArgTypeAccumulator
-checkArgTypes op args =
+-- FIXME : rightArgsNbr here?
+checkArgTypes :: Op -> [ArgContent] -> ChampionData -> Either String ArgTypeAccumulator
+checkArgTypes op args championData =
   let opArgsTypes = getArgsTypes op -- get valid types from op
       opArgsNbr = getNbrArgs op
-  in  foldr (checkArgType opArgsNbr) [] $ zip opArgsTypes args
-
--- END
-
-rightArgsNbr :: Op -> [ArgContent] -> ChampionData -> Bool
-rightArgsNbr op args championData = opArgsNbr == argsNbr
-                          || error ("Bad # of args for mnemonic \""
-                             ++ getMnemonic op
-                             ++ "\": "
-                             ++ show argsNbr
-                             ++ " instead of "
-                             ++ show opArgsNbr
-                             ++ " in \""
-                             ++ getCurrentLine championData
-                             ++ "\"")
-  where argsNbr = length args
-        opArgsNbr = getNbrArgs op
+      argsNbr = length args
+  in if argsNbr == opArgsNbr
+     then let (errors, types) = foldr (checkArgType opArgsNbr) ([], []) $ zip opArgsTypes args
+          in if length errors > 0
+             then Left $ concat errors
+             else Right types
+     else Left $ concat [
+      "Bad # of args for mnemonic \"",
+      getMnemonic op,
+      "\": ",
+      show argsNbr,
+      " instead of ",
+      show opArgsNbr,
+      " in \"",
+      getCurrentLine championData,
+      "\""
+     ]
