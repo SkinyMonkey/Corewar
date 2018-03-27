@@ -12,7 +12,7 @@ import Utils
 type ArgContent = String
 type ArgTypeAccumulator = [ArgType ArgContent]
 type CheckResult = Maybe ArgTypeAccumulator
-type CheckArgTypeResult = ([String], ArgTypeAccumulator)
+type CheckArgTypeResult = (String, ArgTypeAccumulator)
 
 -- Register : r1 <–> rx with x = REG_NUMBER
 -- Example : ld r1,r2 (load r1 in r2)
@@ -110,7 +110,7 @@ checkArgType opArgsNbr (argTypes, arg) (errors, previousAcc) =
      then (errors, endResult)
      -- FIXME : add error infos
      else let newError = noMatchingTypeError arg argTypes endResult previousAcc
-          in ( errors ++ [newError], previousAcc)
+          in ( errors ++ "\n" ++ newError, previousAcc)
 
 -- Returns an evaluation of the res
 -- FIXME : rightArgsNbr here?
@@ -120,9 +120,9 @@ checkArgTypes op args championData =
       opArgsNbr = getNbrArgs op
       argsNbr = length args
   in if argsNbr == opArgsNbr
-     then let (errors, types) = foldr (checkArgType opArgsNbr) ([], []) $ zip opArgsTypes args
+     then let (errors, types) = foldr (checkArgType opArgsNbr) ("", []) $ zip opArgsTypes args
           in if length errors > 0
-             then Left $ concat errors
+             then Left errors
              else Right types
      else Left $ concat [
       "Bad # of args for mnemonic \"",

@@ -7,16 +7,20 @@ import ChampionData
 
 import Debug.Trace
 
-finished fileName step Nothing = error $ step ++ " failed for " ++ fileName
-finished fileName step (Just x)  = (step ++ " complete for " ++ fileName, x)
+finished filename step Nothing = error $ step ++ " failed for " ++ filename
+finished filename step (Just x)  = (step ++ " complete for " ++ filename, x)
 
-generateChampion fileName = do
-  let finishedStep = finished fileName
-  content <- readFile fileName
+-- TODO : this should be the only finished
+finishedParsing filename step (Left errors) = error $ step ++ " failed for " ++ filename ++ errors
+finishedParsing filename step (Right x) = (step ++ " complete for " ++ filename, x)
 
-  let parseRes = parseChampion fileName content
-      (complete, championData) = finishedStep "Parsing" parseRes
-  traceIO $ show championData
+generateChampion filename = do
+  let finishedStep = finished filename
+  content <- readFile filename
+
+  let parseRes = parseChampion filename content
+      (complete, championData) = finishedParsing filename "Parsing" parseRes
+--  traceIO $ show championData
   putStrLn complete
 
   -- FIXME : might not be OK : offset from beginning or
@@ -33,7 +37,7 @@ generateChampion fileName = do
   --         recheck page on bytstrings
 --  binaryCode = generateCode championData offsets -- TODO : finished
 --  writeFile corFileName
---  where corFileName = (take (length(fileName) - 2) fileName) ++ ".cor"
+--  where corFileName = (take (length(filename) - 2) filename) ++ ".cor"
 
 main :: IO ()
 main = do
