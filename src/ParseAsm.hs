@@ -38,7 +38,9 @@ dropComments :: [String] -> [String]
 dropComments args = 
   let isComment arg = any (==';') arg || any (=='#') arg
       commentIndex = findIndex isComment args
-  in flip fmap args $ take (fromJust commentIndex)
+  in if isJust commentIndex
+     then take (fromJust commentIndex) args
+     else args
 
 parseOp :: [String] -> ChampionData -> ParseResult
 parseOp (candidate:args) championData =

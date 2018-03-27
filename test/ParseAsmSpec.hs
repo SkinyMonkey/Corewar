@@ -20,6 +20,7 @@ testParseAsm =
         worked x = Right x
         championData = newChampionData "test"
 
+-- FIXME : 
     describe "dropComments" $ do
       it "should drop all the words after a comment char" $ do
         dropComments ["#", "ok", "ok"] `shouldBe` []
@@ -95,7 +96,7 @@ testParseAsm =
         parseInstruction line championData `shouldBe` worked instructionsChampionData
 
     describe "parseLine, splits a line if its not null or empty, cleans it from comments, maintains the line and line nbr and pass it to parseInstruction" $ do
-      let testParseLine line championDataResult = parseLine (Just championData) line `shouldBe` Just (incLineNbr $ setCurrentLine championDataResult line)
+      let testParseLine line championDataResult = parseLine ("", championData) line `shouldBe` ("", incLineNbr $ setCurrentLine championDataResult line)
 
       it "should ignore the comment but increment the line nbr" $ do
         testParseLine "# all this is ignored" championData
@@ -109,7 +110,7 @@ testParseAsm =
         let op = byMnemonic "live"
             line = "live %1"
             instructionsChampionData = incLineNbr $ setCurrentLine (addInstruction championData op [Direct "1"]) line
-        parseLine (Just championData) line `shouldBe` Just instructionsChampionData
+        parseLine ("", championData) line `shouldBe` ("", instructionsChampionData)
 
       it "should parse and add an instruction to championData but ignore the comments" $ do
         let op = byMnemonic "live"

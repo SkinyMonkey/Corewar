@@ -90,7 +90,7 @@ checkArgType' arg argType typesAcc =
 
 -- FIXME : replace foldr by foldl, no reason to use foldr
 
-noMatchingTypeError arg argTypes endResult previousAcc = concat [
+noMatchingTypeError championData arg argTypes endResult previousAcc = concat [
   "Argument did not match any authorized types :\ntoken : ",
   show arg,
   " -> valid possible argTypes ",
@@ -98,40 +98,45 @@ noMatchingTypeError arg argTypes endResult previousAcc = concat [
   " -> found argType ",
   show endResult,
   " -> result ",
-  show previousAcc
+  show previousAcc,
+  " at line ",
+  show $ getLineNbr championData
   ]
 
 -- Test each authorized types for one argument
 -- Accumulates types and errors
-checkArgType :: Int -> ([ArgType ()], ArgContent) -> CheckArgTypeResult -> CheckArgTypeResult
-checkArgType opArgsNbr (argTypes, arg) (errors, previousAcc) =
+checkArgType :: Int -> ChampionData -> ([ArgType ()], ArgContent) -> CheckArgTypeResult -> CheckArgTypeResult
+checkArgType opArgsNbr championData (argTypes, arg) (errors, previousAcc) =
   let endResult = foldr (checkArgType' arg) previousAcc argTypes
   in if length endResult > length previousAcc
      then (errors, endResult)
-     -- FIXME : add error infos
-     else let newError = noMatchingTypeError arg argTypes endResult previousAcc
+     else let newError = noMatchingTypeError championData arg argTypes endResult previousAcc
           in ( errors ++ "\n" ++ newError, previousAcc)
 
+argNumberError op argsNbr opArgsNbr championData = concat [
+  "Bad # of args for mnemonic \"",
+  getMnemonic op,
+  "\": ",
+  show argsNbr,
+  " instead of ",
+  show opArgsNbr,
+  " in \"",
+  getCurrentLine championData,
+  "\"",
+  " at line ",
+  show $ getLineNbr championData
+  ]
+
 -- Returns an evaluation of the res
--- FIXME : rightArgsNbr here?
 checkArgTypes :: Op -> [ArgContent] -> ChampionData -> Either String ArgTypeAccumulator
 checkArgTypes op args championData =
   let opArgsTypes = getArgsTypes op -- get valid types from op
       opArgsNbr = getNbrArgs op
       argsNbr = length args
+      checkArgType' = checkArgType opArgsNbr championData
   in if argsNbr == opArgsNbr
-     then let (errors, types) = foldr (checkArgType opArgsNbr) ("", []) $ zip opArgsTypes args
+     then let (errors, types) = foldr checkArgType' ("", []) $ zip opArgsTypes args
           in if length errors > 0
              then Left errors
              else Right types
-     else Left $ concat [
-      "Bad # of args for mnemonic \"",
-      getMnemonic op,
-      "\": ",
-      show argsNbr,
-      " instead of ",
-      show opArgsNbr,
-      " in \"",
-      getCurrentLine championData,
-      "\""
-     ]
+     else Left $ argNumberError op argsNbr opArgsNbr championData

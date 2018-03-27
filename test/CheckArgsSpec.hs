@@ -10,8 +10,8 @@ import ChampionData
 
 testCheckArgs =
   describe "CheckArgs" $ do
-    let failed x = Left x
-        worked x = Right x
+    let failed = Nothing
+        worked x = Just x
         emptyResult = worked []
         championData = newChampionData "test"
 
@@ -66,22 +66,12 @@ testCheckArgs =
           argTypesNbr = getNbrArgs $ byMnemonic "live"
 
       it "should match the arg with a type based on of the argTypes" $ do
-        checkArgType argTypesNbr (argTypes, "r1") [] `shouldBe` [Register "1"]
+        checkArgType argTypesNbr (argTypes, "r1") ("", []) `shouldBe` ("", [Register "1"])
 
         let argTypes' = [indirect, register]
             argTypesNbr' = getNbrArgs $ byMnemonic "st"
-        checkArgType argTypesNbr' (argTypes', "19") [] `shouldBe` [Indirect "19"]
+        checkArgType argTypesNbr' (argTypes', "19") ("", []) `shouldBe` ("", [Indirect "19"])
 
 -- FIXME : replace with a failed
 --      it "should fail to match the arg with a type" $ do
 --        evaluate (checkArgType argTypesNbr (argTypes, "r") []) `shouldThrow` errorCall "Argument did not match any authorized types :\ntoken : \"r\" -> valid possible argTypes [Direct (),Register ()] -> found argType []"
-
-    describe "rightArgsNbr" $ do
-      -- TODO : check for every mnemonic
-      let op = byMnemonic "live"
-      it "should check for the argument number" $ do
-        rightArgsNbr op ["r1"] championData `shouldBe` True
-
-      it "should fail to check for the argument number" $ do
-        evaluate (rightArgsNbr op ["r1", "r2"] championData) `shouldThrow` errorCall "Bad # of args for mnemonic \"live\": 2 instead of 1 in \"\""
-        evaluate (rightArgsNbr op [] championData) `shouldThrow` errorCall "Bad # of args for mnemonic \"live\": 0 instead of 1 in \"\""
