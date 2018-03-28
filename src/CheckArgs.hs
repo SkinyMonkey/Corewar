@@ -20,8 +20,8 @@ type CheckArgTypeResult = (String, ArgTypeAccumulator)
 isRegister :: ArgContent -> ArgTypeAccumulator -> CheckResult
 isRegister candidate typesAcc =
   let (c:cs) = candidate
-      registerNumber = parseNum $ cs
-  in if c == 'r' && length cs > 0 && msolved registerNumber
+      registerNumber = parseNum cs
+  in if c == 'r' && not (null cs) && msolved registerNumber
      then Just $ typesAcc ++ [Register (fromJust registerNumber)]
      else Nothing
 
@@ -136,7 +136,7 @@ checkArgTypes op args championData =
       checkArgType' = checkArgType opArgsNbr championData
   in if argsNbr == opArgsNbr
      then let (errors, types) = foldr checkArgType' ("", []) $ zip opArgsTypes args
-          in if length errors > 0
+          in if not (null errors)
              then Left errors
              else Right types
      else Left $ argNumberError op argsNbr opArgsNbr championData

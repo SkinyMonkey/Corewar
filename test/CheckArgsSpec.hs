@@ -62,15 +62,14 @@ testCheckArgs =
         checkArgType' "r" register [] `shouldBe` []
 
     describe "checkArgType" $ do
-      let argTypes = [direct, register]
-          argTypesNbr = getNbrArgs $ byMnemonic "live"
-
       it "should match the arg with a type based on of the argTypes" $ do
-        checkArgType argTypesNbr (argTypes, "r1") ("", []) `shouldBe` ("", [Register "1"])
+        let argTypes = [direct, register]
+            argTypesNbr = getNbrArgs $ byMnemonic "live"
+        checkArgType argTypesNbr championData (argTypes, "r1") ("", []) `shouldBe` ("", [Register "1"])
 
         let argTypes' = [indirect, register]
             argTypesNbr' = getNbrArgs $ byMnemonic "st"
-        checkArgType argTypesNbr' (argTypes', "19") ("", []) `shouldBe` ("", [Indirect "19"])
+        checkArgType argTypesNbr' championData (argTypes', "19") ("", []) `shouldBe` ("", [Indirect "19"])
 
 -- FIXME : replace with a failed
 --      it "should fail to match the arg with a type" $ do
