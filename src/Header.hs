@@ -7,7 +7,7 @@ import Data.Char
 import GHC.Word
 
 -- Header for executable ".cor"
-corewarExecMagic :: [Char]
+corewarExecMagic :: String
 corewarExecMagic = ['\x00','\xea','\x83','\xf3']
 
 magicLen :: Int
@@ -22,9 +22,9 @@ progNameLength = 128
 commentLength ::Int
 commentLength = 2048
 
-rightPaddedString :: Int -> [Char] -> [Char]
+rightPaddedString :: Int -> String -> String
 rightPaddedString size string =
-  string ++ [chr(0) | _ <- [1..size - length(string)]]
+  string ++ [chr 0 | _ <- [1..size - length string ]]
 
 data Header = Header {
   magic :: B.ByteString,

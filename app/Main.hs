@@ -7,24 +7,31 @@ import ChampionData
 
 import Debug.Trace
 
-finished fileName step Nothing = error $ step ++ " failed for " ++ fileName
-finished fileName step (Just x)  = (step ++ " complete for " ++ fileName, x)
+finished :: String -> String -> Maybe a -> (String, a)
+finished filename step Nothing = error $ step ++ " failed for " ++ filename
+finished filename step (Just x)  = (step ++ " complete for " ++ filename, x)
 
-generateChampion fileName = do
-  let finishedStep = finished fileName
-  content <- readFile fileName
+-- TODO : this should be the only finished
+finishedParsing :: String -> String -> Either String a -> (String, a)
+finishedParsing filename step (Left errors) = error $ step ++ " failed for " ++ filename ++ errors
+finishedParsing filename step (Right x) = (step ++ " complete for " ++ filename, x)
 
-  let parseRes = parseChampion fileName content
-      (complete, championData) = finishedStep "Parsing" parseRes
-  traceIO $ show championData
-  putStrLn complete
+generateChampion :: FilePath -> IO ChampionData
+generateChampion filename = do
+  let finishedStep = finished filename
+  content <- readFile filename
+
+  let parseRes = parseChampion filename content
+      (completeParsing, championData) = finishedParsing filename "Parsing" parseRes
+--  traceIO $ show championData
+  putStrLn completeParsing
 
   -- FIXME : might not be OK : offset from beginning or
   -- indirect computed from current byte count?
   let championData' = computeLabelAdressing championData
-      (complete, _) = finishedStep "Label offset computing" $ Just ""
+      (completeLabelComputing, _) = finishedStep "Label offset computing" $ Just ""
   traceIO $ show championData'
-  putStrLn complete
+  putStrLn completeLabelComputing
 
   return championData'
   -- FIXME : put data into a bytestring and write the file here!
@@ -33,7 +40,7 @@ generateChampion fileName = do
   --         recheck page on bytstrings
 --  binaryCode = generateCode championData offsets -- TODO : finished
 --  writeFile corFileName
---  where corFileName = (take (length(fileName) - 2) fileName) ++ ".cor"
+--  where corFileName = (take (length(filename) - 2) filename) ++ ".cor"
 
 main :: IO ()
 main = do

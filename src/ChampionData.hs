@@ -4,26 +4,27 @@ module ChampionData where
 import Debug.Trace
 import Data.Word
 import qualified Data.Map as Map
+import Data.Maybe
 
 import Header
 import Op
 
 getHeader :: ChampionData -> Header
-getHeader self = header self
+getHeader = header
 
 getFileName :: ChampionData -> String
-getFileName self = fileName self
+getFileName = fileName
 
 setFileName :: ChampionData -> String -> ChampionData
 setFileName self fileName = self {fileName = fileName}
 
 getLineNbr :: ChampionData -> Int
-getLineNbr self = lineNbr self
+getLineNbr = lineNbr
 
 getCurrentLine :: ChampionData -> String
-getCurrentLine self = currentLine self
+getCurrentLine = currentLine
 
-getInstructions self = instructions self
+getInstructions = instructions
 
 setInstructions self instructions = self {instructions = instructions}
 
@@ -31,14 +32,12 @@ setCurrentLine :: ChampionData -> String -> ChampionData
 setCurrentLine self line = self {currentLine = line}
 
 getByteCount :: ChampionData -> Int
-getByteCount self = byteCounter self
+getByteCount = byteCounter
 
 getLabelOffset :: ChampionData -> String -> Int
 getLabelOffset self label =
   let offset = Map.lookup label (labels self)
-  in case offset of
-      Just labelOffset -> labelOffset
-      Nothing -> error $ "Used label does not exist : " ++ label
+  in fromMaybe (error $ "Used label does not exist : " ++ label) offset
 
 incLineNbr :: ChampionData -> ChampionData
 incLineNbr self = self {lineNbr = nbr + 1}

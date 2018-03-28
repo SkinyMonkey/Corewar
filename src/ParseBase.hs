@@ -5,18 +5,17 @@ import Data.Char
 import Utils
 
 empty :: String -> Bool
-empty xs = all isSpace xs
+empty = all isSpace
 
 parseString :: String -> Maybe String
 parseString token =
-  let stringContent = slice 1 ((length token) - 1) token
-      isEmpty = length stringContent == 0
-  in if not isEmpty && head token == '"' && last token == '"'
+  let stringContent = slice 1 (length token - 1) token
+  in if not (null stringContent) && head token == '"' && last token == '"'
      then Just stringContent
      else Nothing
 
 alphaChar :: Char -> Bool
-alphaChar c = ((ord c >= ord 'a') && (ord c <= ord 'z'))
+alphaChar c = (ord c >= ord 'a') && (ord c <= ord 'z')
 
 numChar :: Char -> Bool
 numChar c = (ord c >= ord '0') && (ord c <= ord '9')
@@ -28,11 +27,11 @@ parseNum :: String -> Maybe String
 parseNum candidate
   | candidate == "" = Nothing
   | head candidate == '-' =
-    if (not (any (not . numChar) (tail candidate)))
+    if not (any (not . numChar) (tail candidate))
     then Just candidate
     else Nothing
   | otherwise =
-    if (not (any (not . numChar) candidate))
+    if not (any (not . numChar) candidate)
     then Just candidate
     else Nothing
 

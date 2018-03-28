@@ -16,10 +16,11 @@ import ParseAsm
 
 testParseAsm =
   describe "ParseAsm" $ do
-    let failed = Nothing
-        worked x = Just x
+    let failed x = Left x
+        worked x = Right x
         championData = newChampionData "test"
 
+-- FIXME : 
     describe "dropComments" $ do
       it "should drop all the words after a comment char" $ do
         dropComments ["#", "ok", "ok"] `shouldBe` []
@@ -36,10 +37,11 @@ testParseAsm =
         parseMetadata (words ".test \"OK\"") championData `shouldBe` worked championData
 
       it "should fail to parse a Metadata field" $ do
-        parseMetadata (words "test \"\"")  championData `shouldBe` failed
-        parseMetadata (words ".test \"\"") championData `shouldBe` failed
-        parseMetadata (words ".test OK\"") championData `shouldBe` failed
-        parseMetadata (words ".test \"OK") championData `shouldBe` failed
+        let errorMsg = "Malformed metadata"
+        parseMetadata (words "test \"\"")  championData `shouldBe` failed errorMsg 
+        parseMetadata (words ".test \"\"") championData `shouldBe` failed errorMsg
+        parseMetadata (words ".test OK\"") championData `shouldBe` failed errorMsg
+        parseMetadata (words ".test \"OK") championData `shouldBe` failed errorMsg
  
       it "should parse and add the .name Metadata field" $ do
         let championData' = addMetadata championData "name" "OK"
@@ -52,8 +54,9 @@ testParseAsm =
         parseLabel "ok:" championData `shouldBe` worked championData'
 
       it "should fail to parse a label as input is malformed" $ do
-        parseLabel "ok" championData `shouldBe` failed
-        parseLabel ":ok" championData `shouldBe` failed
+        let errorMsg = "Malformed label"
+        parseLabel "ok" championData `shouldBe` failed errorMsg
+        parseLabel ":ok" championData `shouldBe` failed errorMsg
 
     describe "parseOp, parse an op and its arguments" $ do
       it "should parse an op and its args and add it to a championData" $ do
@@ -62,9 +65,10 @@ testParseAsm =
             line = words "live %1"
         parseOp line championData `shouldBe` worked instructionsChampionData
 
+      -- FIXME : replace by a test with failed
       it "should fail to parse an op as the mnemonic wasnt found" $ do
         let line = words "mv"
-        
+
         evaluate (parseOp line championData) `shouldThrow` errorCall "Unknown mnemonic found : mv"
 
     describe "parseInstruction, parse a line by dispatching it to the right rules" $ do
@@ -91,9 +95,8 @@ testParseAsm =
             line = words "label: live %1"
         parseInstruction line championData `shouldBe` worked instructionsChampionData
 
-
     describe "parseLine, splits a line if its not null or empty, cleans it from comments, maintains the line and line nbr and pass it to parseInstruction" $ do
-      let testParseLine line championDataResult = parseLine (Just championData) line `shouldBe` worked (incLineNbr $ setCurrentLine championDataResult line)
+      let testParseLine line championDataResult = parseLine ("", championData) line `shouldBe` ("", incLineNbr $ setCurrentLine championDataResult line)
 
       it "should ignore the comment but increment the line nbr" $ do
         testParseLine "# all this is ignored" championData
@@ -107,7 +110,7 @@ testParseAsm =
         let op = byMnemonic "live"
             line = "live %1"
             instructionsChampionData = incLineNbr $ setCurrentLine (addInstruction championData op [Direct "1"]) line
-        parseLine (Just championData) line `shouldBe` worked instructionsChampionData
+        parseLine ("", championData) line `shouldBe` ("", instructionsChampionData)
 
       it "should parse and add an instruction to championData but ignore the comments" $ do
         let op = byMnemonic "live"

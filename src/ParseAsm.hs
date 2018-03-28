@@ -3,6 +3,7 @@ module ParseAsm where
 import Data.Char (isSpace)
 import Data.List
 import Data.Maybe
+import Data.Either
 
 import Op
 import Utils
@@ -10,12 +11,11 @@ import ParseBase
 import CheckArgs
 import ChampionData
 
--- FIXME : 
--- Either an error string or a ChampionData?
--- type ParseResult = Either String ChampionData
-type ParseResult = Maybe ChampionData
+type ParseError = String
+type ParseResult = Either ParseError ChampionData
 
 parseMetadata :: [String] -> ChampionData -> ParseResult
+parseMetadata [] _ = Left "Empty line"
 parseMetadata (key:args) championData =
   let cstring = unwords args
       firstChar = head key
@@ -23,74 +23,65 @@ parseMetadata (key:args) championData =
       stringContent = parseString cstring
   in
   if firstChar == '.' && msolved field && msolved stringContent
-  then Just $ addMetadata championData (fromJust field) (fromJust stringContent)
-  else Nothing
-parseMetadata [] _ = Nothing
+  then Right $ addMetadata championData (fromJust field) (fromJust stringContent)
+  else Left "Malformed metadata"
 
 parseLabel :: String -> ChampionData -> ParseResult
+parseLabel [] _ = Left "Empty line"
 parseLabel token championData =
   let label = parseId $ init token -- removing the ':' char
   in if last token == ':' && msolved label
-     then Just $ addLabel championData (fromJust label)
-     else Nothing -- FIXME : Nothing? or championData, as in 'untouched'?
+     then Right $ addLabel championData (fromJust label)
+     else Left "Malformed label"
 
 dropComments :: [String] -> [String]
 dropComments args = 
-  let isComment arg = any (==';') arg || any (=='#') arg
+  let isComment arg = elem ';' arg || elem '#' arg
       commentIndex = findIndex isComment args
   in if isJust commentIndex
      then take (fromJust commentIndex) args
      else args
 
 parseOp :: [String] -> ChampionData -> ParseResult
+parseOp [] _ = Left "Empty line"
 parseOp (candidate:args) championData =
   let op = byMnemonic candidate
-      argTypes = checkArgTypes op args
-  in if rightArgsNbr op args championData -- FIXME : finish
-     then Just $ addInstruction championData op argTypes
-     else Nothing
+      argTypes = checkArgTypes op args championData
+   in flip fmap argTypes $ addInstruction championData op
 
 splitOnCommas :: [String] -> [String]
 splitOnCommas = concatMap $ wordsWhen (==',')
 
--- TODO : remove the # guard
--- TODO : split into if thens?
--- les clean to read but better code
 parseInstruction :: [String] -> ChampionData -> ParseResult
 parseInstruction (token:args) championData
---  | head token == '#' = Just championData                  -- comment
   | head token == '.' = parseMetadata tokens championData  -- metadata
   | last token == ':' = parseLabel'                        -- label
   | otherwise = parseOp tokens championData                -- op
     where args' = splitOnCommas args
           tokens = token:args'
           parseLabel' = if not (null args')
-                        then parseOp args' $ fromJust $ parseLabel token championData
+                        then parseOp args' $ fromRight championData $ parseLabel token championData
                         else parseLabel token championData
-parseInstruction [] _ = Nothing
+parseInstruction [] _ = Left "Empty line"
 
--- TODO : remove worked in favor of error accumulation?
-worked :: ParseResult -> ParseResult -> ParseResult
-worked _ (Just championData) = Just championData -- current result one
-worked (Just championData) Nothing = -- default one with line updated
-  error $ "Syntax error \""
-  ++ getCurrentLine championData
-  ++ "\" (line "
-  ++ show (getLineNbr championData + 1) ++ ")"
-
-parseLine :: ParseResult -> String -> ParseResult
-parseLine (Just championData) line  =
+parseLine :: (String, ChampionData) -> String -> (String, ChampionData)
+parseLine (errors, championData) line  =
   let updatedChampionData = incLineNbr $ setCurrentLine championData line
       cleanedLine = ( dropComments . words ) line
-      currentResult = if ((not . null) $ unwords cleanedLine) &&
-                         ((not . empty) $ unwords cleanedLine)
+      currentResult = if (not . null) (unwords cleanedLine) &&
+                         (not . empty) (unwords cleanedLine)
                       then parseInstruction cleanedLine updatedChampionData
-                      else Just updatedChampionData
-  in worked (Just updatedChampionData) currentResult
-
-parseLines :: [String] -> ChampionData -> ParseResult
-parseLines contentLines championData = foldl parseLine (Just championData) contentLines
+                      else Right updatedChampionData
+  in case currentResult of
+    Right result -> (errors, result)
+    Left error   -> (errors ++ "\n" ++ error, updatedChampionData)
 
 parseChampion :: String -> String -> ParseResult
 parseChampion fileName content =
-  parseLines (lines content) (newChampionData fileName)
+  let championData = newChampionData fileName
+      parseLines = foldl parseLine ("", championData)
+      splitContent = lines content
+      (errors, updatedChampionData) = parseLines splitContent
+  in if not (null errors)
+     then Left errors
+     else Right updatedChampionData

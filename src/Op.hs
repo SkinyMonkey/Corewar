@@ -5,7 +5,7 @@ import Data.Word
 
 -- FIXME : USE
 -- Internals definitions
-_memSize = (8 * 1024 + 717)
+_memSize = 8 * 1024 + 717
 _idxMod = 512
 _maxArgsNumber = 4
 _regNumber = 16
