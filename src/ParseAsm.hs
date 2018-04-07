@@ -22,7 +22,7 @@ parseMetadata (key:args) championData =
       field = parseId $ tail key -- removing the '.' char
       stringContent = parseString cstring
   in
-  if firstChar == '.' && msolved field && msolved stringContent
+  if firstChar == '.' && isJust field && isJust stringContent
   then Right $ addMetadata championData (fromJust field) (fromJust stringContent)
   else Left "Malformed metadata"
 
@@ -30,7 +30,7 @@ parseLabel :: String -> ChampionData -> ParseResult
 parseLabel [] _ = Left "Empty line"
 parseLabel token championData =
   let label = parseId $ init token -- removing the ':' char
-  in if last token == ':' && msolved label
+  in if last token == ':' && isJust label
      then Right $ addLabel championData (fromJust label)
      else Left "Malformed label"
 

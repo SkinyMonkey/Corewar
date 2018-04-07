@@ -1,11 +1,12 @@
 import System.Environment (getArgs)
 import ParseAsm
 import ComputeOffsets
---import CodeGeneration
+import CodeGeneration
 
 import ChampionData
 
 import Debug.Trace
+import Header
 
 finished :: String -> String -> Maybe a -> (String, a)
 finished filename step Nothing = error $ step ++ " failed for " ++ filename
@@ -16,7 +17,7 @@ finishedParsing :: String -> String -> Either String a -> (String, a)
 finishedParsing filename step (Left errors) = error $ step ++ " failed for " ++ filename ++ errors
 finishedParsing filename step (Right x) = (step ++ " complete for " ++ filename, x)
 
-generateChampion :: FilePath -> IO ChampionData
+generateChampion :: FilePath -> IO ()
 generateChampion filename = do
   let finishedStep = finished filename
   content <- readFile filename
@@ -26,21 +27,20 @@ generateChampion filename = do
 --  traceIO $ show championData
   putStrLn completeParsing
 
-  -- FIXME : might not be OK : offset from beginning or
-  -- indirect computed from current byte count?
-  let championData' = computeLabelAdressing championData
+  let evaluatedInstuctions = computeLabelAdressing championData
       (completeLabelComputing, _) = finishedStep "Label offset computing" $ Just ""
-  traceIO $ show championData'
+--  traceIO $ show evaluatedInstuctions
   putStrLn completeLabelComputing
 
-  return championData'
-  -- FIXME : put data into a bytestring and write the file here!
+  -- FIXME : 
   --         use cons
   --         use ByteString not ByteString.Lazy
   --         recheck page on bytstrings
---  binaryCode = generateCode championData offsets -- TODO : finished
---  writeFile corFileName
---  where corFileName = (take (length(filename) - 2) filename) ++ ".cor"
+
+  let getCorFileName f = take (length f - 2) f ++ ".cor"
+      corFileName = getCorFileName $ getFileName championData
+  writeChampion corFileName championData evaluatedInstuctions
+  putStrLn $ "Writing done in : " ++ corFileName
 
 main :: IO ()
 main = do

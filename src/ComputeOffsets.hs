@@ -6,22 +6,20 @@ import qualified Data.Map as Map
 import Op
 import ChampionData
 
--- TODO : for every arg in instruction
---        put instruction offset ( + argSize?) into instructions
---        -> instructionOffset - labelOffset
---        transform into an indirect? with (Indirect, show offset)
---        -- getLabelOffset championData, label
-computeArgLabelOffset :: ChampionData -> ArgType String -> ArgType String
-computeArgLabelOffset championData arg =
-  case arg of
-     Label labelName -> Indirect $ show $ getLabelOffset championData labelName
-     _ -> arg
+-- Labels are transformed into Indirects
+computeArgLabelOffset :: ChampionData -> Offset -> Parameter -> EvaluatedParameter
+computeArgLabelOffset championData instructionOffset parameter =
+  case parameter of
+     Label labelName -> 
+      let labelOffset = getLabelOffset championData labelName
+      in Direct $ labelOffset - instructionOffset -- FIXME ? invert?
+     _ -> fmap read parameter
 
-computeArgsLabelOffset :: ChampionData -> (Word8, [ArgType String], Offset) -> (Word8, [ArgType String], Offset)
-computeArgsLabelOffset championData (op, args, offset) = (op, map (computeArgLabelOffset championData) args, offset)
+computeArgsLabelOffset :: ChampionData -> Instruction  -> EvaluatedInstruction
+computeArgsLabelOffset championData (op, parameters, offset) =
+  (op, map (computeArgLabelOffset championData offset) parameters)
 
-computeLabelAdressing :: ChampionData -> ChampionData
+computeLabelAdressing :: ChampionData -> [EvaluatedInstruction]
 computeLabelAdressing championData =
   let instructions = getInstructions championData
-      newInstructions = map (computeArgsLabelOffset championData) instructions
-  in setInstructions championData newInstructions
+  in map (computeArgsLabelOffset championData) instructions

@@ -9,86 +9,79 @@ import ChampionData
 
 import Utils
 
-type ArgContent = String
-type ArgTypeAccumulator = [ArgType ArgContent]
-type CheckResult = Maybe ArgTypeAccumulator
+type ArgTypeAccumulator = [Parameter]
+type CheckResult = Maybe Parameter
 type CheckArgTypeResult = (String, ArgTypeAccumulator)
 
 -- Register : r1 <–> rx with x = REG_NUMBER
 -- Example : ld r1,r2 (load r1 in r2)
 -- 'r' #num
-isRegister :: ArgContent -> ArgTypeAccumulator -> CheckResult
-isRegister candidate typesAcc =
+isRegister :: ArgContent -> CheckResult
+isRegister candidate =
   let (c:cs) = candidate
       registerNumber = parseNum cs
-  in if c == 'r' && not (null cs) && msolved registerNumber
-     then Just $ typesAcc ++ [Register (fromJust registerNumber)]
+  in if c == 'r' && not (null cs) && isJust registerNumber
+     then fmap Register registerNumber
      else Nothing
 
 -- Label : id precedeed by LABEL_CHAR
 -- ':' #id
-isLabel :: ArgContent -> ArgTypeAccumulator -> CheckResult
-isLabel candidate typesAcc =
+isLabel :: ArgContent -> CheckResult
+isLabel candidate =
   let (c:cs) = candidate
       labelName = parseId cs
-  in if c == ':' && msolved labelName
-     then Just $ typesAcc ++ [Label (fromJust labelName)]
+  in if c == ':' && isJust labelName
+     then fmap Label labelName
      else Nothing
 
 getArgValue :: ArgType ArgContent -> ArgContent
 getArgValue (Label value) = value
 
-argIsLabel :: ArgType ArgContent -> Bool
-argIsLabel (Label _) = True
-argIsLabel _         = False
+argIsLabel :: Maybe (ArgType ArgContent) -> Bool
+argIsLabel (Just (Label _)) = True
+argIsLabel _                = False
 
 -- Direct : The character DIRECT_CHAR followed by a value or a label,
 -- which represents a direct value.
 -- Example : ld $4,r5 (load 4 in r5)
 -- Example : ld %:label, r7 (load label in r7)
 -- '%' [ label | value ]
-isDirect :: ArgContent -> ArgTypeAccumulator -> CheckResult
-isDirect candidate typesAcc =
+isDirect :: ArgContent -> CheckResult
+isDirect candidate =
   let (c:cs) = candidate
-      result = isIndirect cs []
+      result = isIndirect cs
       directValue = parseNum cs
   in if c == '%'
-     then if isJust result && argIsLabel (last $ fromJust result)  -- We get the evaluated label
-          then Just $ typesAcc ++ [last $ fromJust result]
-          else if msolved directValue -- direct value
-               then Just $ typesAcc ++ [Direct (fromJust directValue)]
-               else Nothing
+     then if isJust result && argIsLabel result  -- We get the evaluated label
+          then result
+          else fmap Direct directValue -- direct value
      else Nothing
 
 -- Indirect : A value or a label which represents the
 -- value contained at the address of the parameter, relative to the PC.
 -- Example : ld 4,r5 (load the 4 bytes at address (4+PC) in r5).
 -- [ label | value ]
-isIndirect :: ArgContent -> ArgTypeAccumulator -> CheckResult
-isIndirect candidate typesAcc =
-  let labelResult = isLabel candidate typesAcc
+isIndirect :: ArgContent -> CheckResult
+isIndirect candidate =
+  let labelResult = isLabel candidate
       indirectRes = parseNum candidate
-  in if msolved labelResult
+  in if isJust labelResult
      then labelResult
-     else if msolved indirectRes
-          then Just $ typesAcc ++ [Indirect (fromJust indirectRes)]
-          else Nothing
+     else fmap Indirect indirectRes
 
 -- checkArgTypes
 
 -- Test argument type
-checkArgType' :: ArgContent -> ArgType () -> ArgTypeAccumulator -> ArgTypeAccumulator
-checkArgType' arg argType typesAcc =
+checkArgType' :: ArgContent -> ArgTypeAccumulator -> ArgType () -> ArgTypeAccumulator
+checkArgType' arg typesAcc argType  =
  let currentResult = case argType of
-      Register _ -> isRegister arg typesAcc
-      Indirect _ -> isIndirect arg typesAcc
-      Direct _ -> isDirect arg typesAcc
+      Register _ -> isRegister arg
+      Indirect _ -> isIndirect arg
+      Direct _ -> isDirect arg
       Label _ -> undefined -- should never happen
-     in if msolved currentResult
-        then fromJust currentResult
+     in if isJust currentResult
+        then typesAcc ++ [fromJust currentResult]
         else typesAcc
-
--- FIXME : replace foldr by foldl, no reason to use foldr
 
 noMatchingTypeError championData arg argTypes endResult previousAcc = concat [
   "Argument did not match any authorized types :\ntoken : ",
@@ -105,9 +98,9 @@ noMatchingTypeError championData arg argTypes endResult previousAcc = concat [
 
 -- Test each authorized types for one argument
 -- Accumulates types and errors
-checkArgType :: Int -> ChampionData -> ([ArgType ()], ArgContent) -> CheckArgTypeResult -> CheckArgTypeResult
-checkArgType opArgsNbr championData (argTypes, arg) (errors, previousAcc) =
-  let endResult = foldr (checkArgType' arg) previousAcc argTypes
+checkArgType :: Int -> ChampionData -> CheckArgTypeResult -> ([ArgType ()], ArgContent) -> CheckArgTypeResult
+checkArgType opArgsNbr championData (errors, previousAcc) (argTypes, arg) =
+  let endResult = foldl (checkArgType' arg) previousAcc argTypes
   in if length endResult > length previousAcc
      then (errors, endResult)
      else let newError = noMatchingTypeError championData arg argTypes endResult previousAcc
@@ -133,9 +126,11 @@ checkArgTypes op args championData =
   let opArgsTypes = getArgsTypes op -- get valid types from op
       opArgsNbr = getNbrArgs op
       argsNbr = length args
+-- FIXME : name shadowing
       checkArgType' = checkArgType opArgsNbr championData
+      instructionsToCheck = zip opArgsTypes args
   in if argsNbr == opArgsNbr
-     then let (errors, types) = foldr checkArgType' ("", []) $ zip opArgsTypes args
+     then let (errors, types) = foldl checkArgType' ("", []) instructionsToCheck
           in if not (null errors)
              then Left errors
              else Right types

@@ -39,19 +39,11 @@ setProgName self value = self {progName = value}
 setComment :: Header -> String -> Header
 setComment self value = self {comment = value}
 
+setProgSize :: Header -> Word32 -> Header
+setProgSize self value = self {progSize = value}
+
 newHeader = Header
   (B.pack $ rightPaddedString magicLen corewarExecMagic)
   ""
   0
   ""
-
-serializeHeader :: Header -> PutM ()
-serializeHeader header = do
-  putByteString $ magic header
-  putByteString $ B.pack $ rightPaddedString progNameLength (progName header)
-  putWord32be $ progSize header
-  putByteString $ B.pack $ rightPaddedString commentLength (comment header)
-
-writeHeader header fileName = B.writeFile
-  fileName
-  (B.concat $ BL.toChunks $ runPut (serializeHeader header))

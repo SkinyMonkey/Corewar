@@ -49,9 +49,6 @@ solve check value =
   then Just value
   else Nothing
 
-msolved :: Maybe a -> Bool
-msolved = isJust
-
 solved :: (a, b) -> a
 solved = fst
 

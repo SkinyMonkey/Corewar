@@ -2,7 +2,7 @@
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: b02536c42efb7b3c0db1b14a7e17eb8611c563758c6bbb6d1c1d74acb9b2b9ae
+-- hash: 4f1589491b89fac1855940ff3dccee479c8e9056ce75fbc0bf74a560e2b1a146
 
 name:           corewar
 version:        0.1.0.0
@@ -37,6 +37,7 @@ library
   exposed-modules:
       ChampionData
       CheckArgs
+      CodeGeneration
       ComputeOffsets
       Header
       Op
@@ -78,6 +79,8 @@ test-suite asm-test
     , hspec
   other-modules:
       CheckArgsSpec
+      CodeGenerationSpec
+      ComputeOffsetsSpec
       ParseAsmSpec
       Paths_corewar
   default-language: Haskell2010

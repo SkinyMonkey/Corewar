@@ -5,9 +5,23 @@ import Debug.Trace
 import Data.Word
 import qualified Data.Map as Map
 import Data.Maybe
+import Foreign.Storable
 
 import Header
 import Op
+
+type Offset = Word32
+type ArgContent = String
+type Parameter = ArgType ArgContent
+type Instruction = (Word8, [Parameter], Offset)
+type EvaluatedParameter = ArgType Word32
+type EvaluatedInstruction = (Word8, [EvaluatedParameter])
+
+instance Functor ArgType where
+  fmap f (Register x) = Register (f x)
+  fmap f (Indirect x) = Indirect (f x)
+  fmap f (Direct x) = Direct (f x)
+  fmap f (Label x) = Label (f x)
 
 getHeader :: ChampionData -> Header
 getHeader = header
@@ -31,10 +45,10 @@ setInstructions self instructions = self {instructions = instructions}
 setCurrentLine :: ChampionData -> String -> ChampionData
 setCurrentLine self line = self {currentLine = line}
 
-getByteCount :: ChampionData -> Int
+getByteCount :: ChampionData -> Word32
 getByteCount = byteCounter
 
-getLabelOffset :: ChampionData -> String -> Int
+getLabelOffset :: ChampionData -> String -> Offset
 getLabelOffset self label =
   let offset = Map.lookup label (labels self)
   in fromMaybe (error $ "Used label does not exist : " ++ label) offset
@@ -43,22 +57,24 @@ incLineNbr :: ChampionData -> ChampionData
 incLineNbr self = self {lineNbr = nbr + 1}
   where nbr = getLineNbr self
 
--- FIXME : use common.hs definitions, indSize etc
-argByteSize :: ArgType String -> Int
-argByteSize arg =
+-- FIXME : use sizeOf Word32, Word16
+argByteSize :: Bool -> ArgType ArgContent -> Word32
+argByteSize instructionHasIndex arg =
   case arg of
-    Register _ -> 4
-    Direct _ -> 4
+    Register _ -> 1
+    Direct _ -> if instructionHasIndex then 2 else 4
     Indirect _ -> 2
     Label _ -> 2
 
-argsByteSize :: Word8 -> [ArgType String] -> Int
+-- FIXME : create an OpCode type
+--         use sizeOf code
+argsByteSize :: Word8 -> [ArgType String] -> Word32
 argsByteSize code args =
-  if code `elem` noOpCodeInstructions
-  then 2 -- FIXME : correct?
-  else 2 + sum (map argByteSize args)
+  let argSize = sum (map (argByteSize (code `elem` haveIndexInstructions)) args)
+  in if code `elem` noOpCodeInstructions
+     then 1 + argSize -- one byte for the instruction code
+     else 2 + argSize -- one for instruction code, one for the opcode
 
--- INFO : instruction = (code, [(parameterType, argValue)])
 addInstruction self op args =
   let code = getCode op
       offset = getByteCount self
@@ -83,17 +99,23 @@ getProgName self = progName header
 resetByteCounter :: ChampionData -> ChampionData
 resetByteCounter self = self {byteCounter = 0}
 
+-- For testing purpose
+setByteCounter :: ChampionData -> Word32 -> ChampionData
+setByteCounter self value = self {byteCounter = value}
+
 incCounter :: ChampionData -> Word8 -> [ArgType String] -> ChampionData
 incCounter self code args =
-  self {byteCounter = byteCounter self + argsByteSize code args}
+  let newByteCounter = byteCounter self + argsByteSize code args
+      newHeader = setProgSize (header self) newByteCounter
+  in self {byteCounter = newByteCounter, header = newHeader }
 
 data ChampionData = ChampionData {
   fileName :: String,
   currentLine :: String,
   lineNbr :: Int,
-  byteCounter :: Int,
-  instructions :: [(Word8, [ArgType String], Offset)],
-  labels :: Map.Map String Int,
+  byteCounter :: Word32,
+  instructions :: [Instruction],
+  labels :: Map.Map String Offset,
   header :: Header
 } deriving (Show, Eq)
 
