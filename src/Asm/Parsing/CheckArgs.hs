@@ -1,11 +1,11 @@
-module CheckArgs where
+module Asm.Parsing.CheckArgs where
 
 import Data.Maybe
 import Data.Either
 
 import Op
-import ParseBase
-import ChampionData
+import Asm.ChampionData
+import Asm.Parsing.ParseBase
 
 import Utils
 

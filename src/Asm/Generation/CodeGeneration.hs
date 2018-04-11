@@ -1,4 +1,4 @@
-module CodeGeneration where
+module Asm.Generation.CodeGeneration where
 
 import qualified Data.ByteString.Lazy as BL
 import qualified Data.ByteString.Char8 as B
@@ -12,8 +12,8 @@ import Data.Bits
 import Foreign.Storable
 
 import Op
-import Header
-import ChampionData
+import Asm.Header
+import Asm.ChampionData
 
 -- FIXME : DEBUG
 import Debug.Trace
@@ -75,7 +75,7 @@ serializeHeader header = do
   putByteString $ magic header
   putByteString $ B.pack $ rightPaddedString (progNameLength + 4) (progName header)
   putWord32be $ progSize header
-  putByteString $ B.pack $ rightPaddedString (commentLength + 4) (Header.comment header)
+  putByteString $ B.pack $ rightPaddedString (commentLength + 4) (Asm.Header.comment header)
 
 writeInstruction :: String -> ChampionData -> EvaluatedInstruction -> IO ()
 writeInstruction fileName championData instruction = do

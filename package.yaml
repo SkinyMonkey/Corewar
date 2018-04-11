@@ -24,6 +24,7 @@ dependencies:
 - binary
 - bytestring
 - containers
+- lens
 
 library:
   source-dirs: src
@@ -31,7 +32,20 @@ library:
 executables:
   asm:
     main:                Main.hs
-    source-dirs:         app
+    source-dirs:         asm
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    - -Wall
+    - -Wextra
+    - -O3
+    dependencies:
+    - corewar
+
+  vm:
+    main:                Main.hs
+    source-dirs:         vm
     ghc-options:
     - -threaded
     - -rtsopts

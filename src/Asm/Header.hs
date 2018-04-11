@@ -1,4 +1,4 @@
-module Header where
+module Asm.Header where
 
 import qualified Data.ByteString.Lazy as BL
 import qualified Data.ByteString.Char8 as B

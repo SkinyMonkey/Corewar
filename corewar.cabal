@@ -2,7 +2,7 @@
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 4f1589491b89fac1855940ff3dccee479c8e9056ce75fbc0bf74a560e2b1a146
+-- hash: a063c16518688f7cfff9edea2f4c6c6a1e80dfaaf3d8367d9ff036260943372b
 
 name:           corewar
 version:        0.1.0.0
@@ -34,16 +34,19 @@ library
     , binary
     , bytestring
     , containers
+    , lens
   exposed-modules:
-      ChampionData
-      CheckArgs
-      CodeGeneration
-      ComputeOffsets
-      Header
+      Asm.ChampionData
+      Asm.Generation.CodeGeneration
+      Asm.Generation.ComputeOffsets
+      Asm.Header
+      Asm.Parsing.CheckArgs
+      Asm.Parsing.ParseAsm
+      Asm.Parsing.ParseBase
       Op
-      ParseAsm
-      ParseBase
       Utils
+      Vm.Instructions
+      Vm.Vm
   other-modules:
       Paths_corewar
   default-language: Haskell2010
@@ -51,7 +54,7 @@ library
 executable asm
   main-is: Main.hs
   hs-source-dirs:
-      app
+      asm
   ghc-options: -threaded -rtsopts -with-rtsopts=-N -Wall -Wextra -O3
   build-depends:
       base >=4.7 && <5
@@ -59,6 +62,23 @@ executable asm
     , bytestring
     , containers
     , corewar
+    , lens
+  other-modules:
+      Paths_corewar
+  default-language: Haskell2010
+
+executable vm
+  main-is: Main.hs
+  hs-source-dirs:
+      vm
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N -Wall -Wextra -O3
+  build-depends:
+      base >=4.7 && <5
+    , binary
+    , bytestring
+    , containers
+    , corewar
+    , lens
   other-modules:
       Paths_corewar
   default-language: Haskell2010
@@ -77,10 +97,12 @@ test-suite asm-test
     , containers
     , corewar
     , hspec
+    , lens
   other-modules:
       CheckArgsSpec
       CodeGenerationSpec
       ComputeOffsetsSpec
+      InstructionsSpec
       ParseAsmSpec
       Paths_corewar
   default-language: Haskell2010

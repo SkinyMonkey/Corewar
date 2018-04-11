@@ -1,4 +1,4 @@
-module ParseBase where
+module Asm.Parsing.ParseBase where
 
 import Data.Maybe
 import Data.Char

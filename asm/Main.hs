@@ -1,12 +1,12 @@
 import System.Environment (getArgs)
-import ParseAsm
-import ComputeOffsets
-import CodeGeneration
+import Asm.Parsing.ParseAsm
+import Asm.Generation.ComputeOffsets
+import Asm.Generation.CodeGeneration
 
-import ChampionData
+import Asm.ChampionData
+import Asm.Header
 
 import Debug.Trace
-import Header
 
 finished :: String -> String -> Maybe a -> (String, a)
 finished filename step Nothing = error $ step ++ " failed for " ++ filename
@@ -46,4 +46,4 @@ main :: IO ()
 main = do
         args <- getArgs
         mapM_ generateChampion args
-        putStrLn "End"
+        putStrLn "End Asm"
