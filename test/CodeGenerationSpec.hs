@@ -10,8 +10,8 @@ import Data.Word
 import Data.Binary.Put
 
 import Op
-import ChampionData
-import CodeGeneration
+import Asm.ChampionData
+import Asm.Generation.CodeGeneration
 
 testCodeGeneration =
   describe "CodeGeneration" $ do
@@ -72,14 +72,16 @@ testCodeGeneration =
       -- TODO real checks
       --      use pack to create ByteString to compare
       it "serializeParameter" $ do
-        let param = Register 1
+        let instruction = 0x01 -- live
+            param = Register 1
             expectedResult = Prelude.map c2w "\1"
-        (B.concat $ BL.toChunks $ runPut $ serializeParameter championData param) `shouldBe` B.pack expectedResult
+        (B.concat $ BL.toChunks $ runPut $ serializeParameter championData instruction param) `shouldBe` B.pack expectedResult
 
       it "serializeParameters" $ do
-        let params = [Register 1, Direct 2, Indirect 3]
+        let instruction = 0x01 -- live
+            params = [Register 1, Direct 2, Indirect 3]
             expectedResult = map c2w "\1\0\0\0\2\0\3"
-        (B.concat $ BL.toChunks $ runPut $ serializeParameters championData params) `shouldBe` B.pack expectedResult
+        (B.concat $ BL.toChunks $ runPut $ serializeParameters championData instruction params) `shouldBe` B.pack expectedResult
 
       describe "serializeInstruction" $ do
         it "serialize an instruction without an opcode but with its parameters" $ do

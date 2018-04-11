@@ -1,4 +1,4 @@
-module ParseAsm where
+module Asm.Parsing.ParseAsm where
 
 import Data.Char (isSpace)
 import Data.List
@@ -7,9 +7,9 @@ import Data.Either
 
 import Op
 import Utils
-import ParseBase
-import CheckArgs
-import ChampionData
+import Asm.ChampionData
+import Asm.Parsing.ParseBase
+import Asm.Parsing.CheckArgs
 
 type ParseError = String
 type ParseResult = Either ParseError ChampionData

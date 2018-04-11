@@ -4,8 +4,8 @@ import Test.Hspec
 import Control.Exception (evaluate)
 
 import Op
-import ChampionData
-import ParseAsm
+import Asm.ChampionData
+import Asm.Parsing.ParseAsm
 
 -- TODO : finish and use
 -- goal is to 

@@ -5,8 +5,8 @@ import Test.QuickCheck
 import Control.Exception (evaluate)
 
 import Op
-import CheckArgs
-import ChampionData
+import Asm.ChampionData
+import Asm.Parsing.CheckArgs
 
 testCheckArgs =
   describe "CheckArgs" $ do

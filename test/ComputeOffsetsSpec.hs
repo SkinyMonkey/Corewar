@@ -4,9 +4,9 @@ import Test.Hspec
 import Test.QuickCheck
 import Control.Exception (evaluate)
 
+import Asm.ChampionData
+import Asm.Generation.ComputeOffsets
 import Op
-import ComputeOffsets
-import ChampionData
 
 testComputeOffsets =
   describe "ComputeOffsets" $ do
@@ -18,4 +18,4 @@ testComputeOffsets =
     describe "A" $ do 
       it "B" $ do
         let newChampionData = addLabel (setByteCounter championData 15) "live"
-        computeArgLabelOffset newChampionData 0 (Label "live") `shouldBe` Indirect 15
+        computeArgLabelOffset newChampionData 0 (Label "live") `shouldBe` Direct 15

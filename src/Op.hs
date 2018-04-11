@@ -5,10 +5,10 @@ import Data.Word
 
 -- FIXME : USE
 -- Internals definitions
-_memSize = 8 * 1024 + 717
-_idxMod = 512
-_maxArgsNumber = 4
-_regNumber = 16
+memSize = 8 * 1024 + 717 :: Int
+idxMod = 512 :: Int
+maxArgsNumber = 4 :: Int
+regNumber = 16 :: Int
 
 -- Asm syntax
 _commentChar = '#'
@@ -20,20 +20,30 @@ _nameCmdString = ".name"
 _commentCmdString = ".comment"
 
 -- Size for memory access
-_indSize = 2
-_regSize = 4
-_dirSize = _regSize
+indSize = 2 :: Int
+regSize = 4 :: Int
+dirSize = regSize
+
+type Offset = Word32
 
 -- Op arguments types
 
+-- FIXME : find a way to reuse this type in both Asm and Vm
+--         without specifying a type at construction
+--         not -> ArgType Word8 Word16 Word32
+--         not -> PRegister = Register Word8
+--         not -> ArgType Word 32
+--             -> would force use to do a lot of fromIntegral for nothing
 data ArgType a = Register a | Direct a | Indirect a | Label a deriving (Show, Eq)
 
+-- FIXME : remove, use a -> ArgType a instead
 register = Register ()
 direct = Direct ()
 indirect = Indirect ()
 
 -- Param octet codage 
 
+-- FIXME : remove ArgType (), use a -> ArgType a instead
 data Op = Op {
   mnemonic :: String,
   nbrArgs :: Int,
@@ -49,6 +59,7 @@ getMnemonic = mnemonic
 getNbrArgs :: Op -> Int
 getNbrArgs = nbrArgs
 
+-- FIXME : remove ArgType (), use a -> ArgType a instead
 getArgsTypes :: Op -> [[ArgType ()]]
 getArgsTypes = argsType
 
@@ -85,6 +96,7 @@ byMnemonic "zjmp" =  Op "zjmp" 1 [[direct]]  9 20 "jump if zero"
 byMnemonic "ldi" =  Op "ldi" 3 [[register, direct, indirect],
                          [direct, register],
                          [register]] 10 25 "load index"
+
 byMnemonic "sti" =  Op "sti" 3 [[register],
                          [register, direct, indirect],
                          [direct, register]] 11 25 "store index"

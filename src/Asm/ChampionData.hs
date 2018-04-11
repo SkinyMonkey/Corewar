@@ -1,4 +1,4 @@
-module ChampionData where
+module Asm.ChampionData where
 
 -- FIXME : DEBUG
 import Debug.Trace
@@ -7,10 +7,9 @@ import qualified Data.Map as Map
 import Data.Maybe
 import Foreign.Storable
 
-import Header
+import Asm.Header
 import Op
 
-type Offset = Word32
 type ArgContent = String
 type Parameter = ArgType ArgContent
 type Instruction = (Word8, [Parameter], Offset)

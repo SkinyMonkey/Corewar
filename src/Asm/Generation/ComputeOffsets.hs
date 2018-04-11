@@ -1,10 +1,10 @@
-module ComputeOffsets where
+module Asm.Generation.ComputeOffsets where
 
 import Data.Word
 import qualified Data.Map as Map
 
 import Op
-import ChampionData
+import Asm.ChampionData
 
 -- Labels are transformed into Indirects
 computeArgLabelOffset :: ChampionData -> Offset -> Parameter -> EvaluatedParameter
