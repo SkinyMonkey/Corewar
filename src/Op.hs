@@ -5,10 +5,19 @@ import Data.Word
 
 -- FIXME : USE
 -- Internals definitions
-memSize = 8 * 1024 + 717 :: Int
+memSize = 2301 :: Int -- 8 * 1024 + 717 :: Int
 idxMod = 512 :: Int
 maxArgsNumber = 4 :: Int
 regNumber = 16 :: Int
+-- FIXME : move header length definition into op and use them
+magicSize = 4
+nameSize = 128
+progSizeSize = 4
+commentSize = 2048
+headerSize = magicSize + nameSize + progSizeSize + commentSize
+nameOffset = magicSize :: Int
+progSizeOffset = nameOffset + nameSize :: Int
+commentOffset = progSizeOffset + progSizeSize :: Int
 
 -- Asm syntax
 _commentChar = '#'
@@ -25,6 +34,8 @@ regSize = 4 :: Int
 dirSize = regSize
 
 type Offset = Word32
+type RegisterNbr = Word8
+type RegisterValue = Word8
 
 -- Op arguments types
 
@@ -34,7 +45,11 @@ type Offset = Word32
 --         not -> PRegister = Register Word8
 --         not -> ArgType Word 32
 --             -> would force use to do a lot of fromIntegral for nothing
+--         OR move this to the asm part
+--         rename is to parameter
+--         -> two different context, two different meanings
 data ArgType a = Register a | Direct a | Indirect a | Label a deriving (Show, Eq)
+
 
 -- FIXME : remove, use a -> ArgType a instead
 register = Register ()

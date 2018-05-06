@@ -17,7 +17,7 @@ progNameLength :: Int
 progNameLength = 128
 
 --sizeContentLength :: Int
---sizeContentLength = 8
+--progSizeLength = 4
 
 commentLength ::Int
 commentLength = 2048

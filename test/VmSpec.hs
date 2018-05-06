@@ -10,6 +10,14 @@ testVm
     let program = newProgram 0 "test" 0 $ pack ""
         vm = newVm [program]
 
+    it "w8stoW32 && w32tow8s" $ do
+      w = 1000000000000
+      (w8stoW32 $ w32tow8s w) `shouldBe` w
+
+    it "w8stoW32le && w32tow8sle" $ do
+      w = 100000000000
+      (w8stoW32le $ w32tow8sle w) `shouldBe` w
+
     it "getCurrentProgram" $ do
       getCurrentProgram vm `shouldBe` program
 

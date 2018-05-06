@@ -2,7 +2,7 @@
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 6a242826c1b6df9c62026e364f8ae9ec9ae209eb9f182be63f01722116ade658
+-- hash: 4348ce7bdf5c30ce4a383226afab4ed574fdee608d8c467622b13fc5a82faf60
 
 name:           corewar
 version:        0.1.0.0
@@ -35,6 +35,7 @@ library
     , bytestring
     , containers
     , lens
+    , ncurses >=0.2
   exposed-modules:
       Asm.ChampionData
       Asm.Generation.CodeGeneration
@@ -46,6 +47,8 @@ library
       Op
       Utils
       Vm.Instructions
+      Vm.Ui
+      Vm.UnpackInstruction
       Vm.Vm
   other-modules:
       Paths_corewar
@@ -63,6 +66,7 @@ executable asm
     , containers
     , corewar
     , lens
+    , ncurses >=0.2
   other-modules:
       Paths_corewar
   default-language: Haskell2010
@@ -79,6 +83,7 @@ executable vm
     , containers
     , corewar
     , lens
+    , ncurses >=0.2
   other-modules:
       Paths_corewar
   default-language: Haskell2010
@@ -98,6 +103,7 @@ test-suite asm-test
     , corewar
     , hspec
     , lens
+    , ncurses >=0.2
   other-modules:
       CheckArgsSpec
       CodeGenerationSpec

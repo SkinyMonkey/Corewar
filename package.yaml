@@ -25,6 +25,7 @@ dependencies:
 - bytestring
 - containers
 - lens
+- ncurses >= 0.2
 
 library:
   source-dirs: src

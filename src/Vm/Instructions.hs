@@ -9,6 +9,8 @@ import qualified Data.ByteString as B
 import Op
 import Vm.Vm
 
+import Debug.Trace
+
 modIdxMod = flip mod idxMod
 
 validRegister registerNbr =
@@ -33,6 +35,7 @@ ld_ f [firstParam, PRegister registerNbr] vm =
            vm' = setCurrentProgramCarry (value /= 0) vm
        in Just $ setCurrentProgramRegister registerNbr value vm'
   else Nothing
+ld_ _ _ _ = Nothing
  
 -- This instruction takes 2 parameters,
 -- the 2nd of which has to be a register (not the PC)
@@ -57,6 +60,7 @@ st [PRegister registerNbr, secondParam] vm =
         PRegister dstPRegister -> Just $ setCurrentProgramRegister dstPRegister value vm
         PIndirect offset -> Just $ setMemoryByCurrentProgramPc modIdxMod (fromIntegral offset) (fromIntegral value) regSize vm
   else Nothing
+st _ _ = Nothing
 
 registerOperation :: (RegisterValue -> RegisterValue -> RegisterValue) -> [Parameter] -> Vm -> Maybe Vm
 registerOperation f [PRegister r1, PRegister r2, PRegister r3] vm = 
@@ -73,10 +77,11 @@ registerCarryOperation f [PRegister r1, PRegister r2, PRegister r3] vm =
   let params = [PRegister r1, PRegister r2, PRegister r3]
       vm' = registerOperation f params vm
   in if isJust vm'
+     -- FIXME : remove fromJust, chain with <$> or <*>
      then let registerValue = getCurrentProgramRegister r3 $ fromJust vm'
-              carry = registerValue == 0
-          in Just $ setCurrentProgramCarry carry $ fromJust vm'
+          in setCurrentProgramCarry (registerValue /= 0) <$> vm'
      else Nothing
+registerCarryOperation _ _ _ = Nothing
 
 -- This instruction takes 3 registers as parameter,
 -- adds the contents of the 2 first and stores the result in the third.
@@ -111,6 +116,7 @@ zjmp [PDirect offset] vm =
   if carry (getCurrentProgram vm) == True
   then Just $ setCurrentProgramPc offset vm
   else Nothing
+zjmp _ _ = Nothing
  
 ldi_ :: (Int -> Int) -> [Parameter] -> Vm -> Maybe Vm
 ldi_ f [firstParam, secondParam, PRegister registerNbr] vm =
@@ -121,6 +127,7 @@ ldi_ f [firstParam, secondParam, PRegister registerNbr] vm =
            vm' = setCurrentProgramCarry (finalValue /= 0) vm
         in Just $ setCurrentProgramRegister registerNbr finalValue vm
   else Nothing
+ldi_ _ _ _ = Nothing
 
 -- This operation modifies the carry.
 -- ldi 3,%4,r1 reads IND_SIZE bytes at address: (PC + (3 % IDX_MOD)),
@@ -158,12 +165,11 @@ sti [PRegister r1, secondParam, thirdParam] vm =
           PRegister registerNbr -> fromIntegral $ getCurrentProgramRegister registerNbr vm
           PDirect value -> fromIntegral $ value
           PIndirect value -> fromIntegral $ value
+sti _ _ = Nothing
 
 fork_ :: (Int -> Int) -> [Parameter] -> Vm -> Maybe Vm
 fork_ f [param] vm =
   let program = getCurrentProgram vm
-      programInstructions = instructions program
-      programSize = B.length programInstructions
       offset = parameterValue param
       pc' = f $ fromIntegral $ offset + pc program
       program' = program { pc = fromIntegral pc' :: Offset }
@@ -205,3 +211,22 @@ aff [PRegister registerNbr] vm =
            aff' = affBuffer vm ++ [w2c value]
        in Just $ vm { affBuffer = aff' }
   else Nothing
+aff _ _ = Nothing
+
+instructionTable = [
+  live,
+  ld,
+  st,
+  add,
+  sub,
+  Vm.Instructions.and,
+  Vm.Instructions.or,
+  Vm.Instructions.xor,
+  zjmp,
+  ldi,
+  sti,
+  fork,
+  lld,
+  lldi,
+  lfork,
+  aff]

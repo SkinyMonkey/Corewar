@@ -1,77 +1,84 @@
 import System.Environment (getArgs)
+import Control.Monad.IO.Class
+import Control.Concurrent (threadDelay)
+import qualified Data.ByteString as B
+import qualified Data.ByteString.Lazy as BL
+import Data.Word
+import Data.Binary.Get
+import Data.Maybe
 
 import Debug.Trace
 
--- load
---  read file
---  get program code after header
---  create program into vm + load at right offset -> loadProgram in Vm.hs?
+import Utils
+import Op
+import Vm.Vm
+import Vm.UnpackInstruction
+import Vm.Instructions
+import Vm.Ui
 
--- executeInstruction instruction params vm
--- if instruction > 0 && instruction < length instructionTable
--- then let instructionHandler = instructionTable !! instruction
---      in instructionHandler params vm
--- else Nothing
+-- FIXME : import from somewhere?
+refreshDelay = 100000
 
--- incrementPcByOpCode instruction paramCode
--- if instruction has paramCode
--- then if validOpCode paramCode
---      then incrementPc (paramCodeSize paramCode)
---      else incrementPc 1
--- else incrementPc 2 -- instruction + paramCode
+loadProgram :: Int -> Vm -> (Int, B.ByteString) -> Vm
+loadProgram championsNbr vm (championNumber, fileContent) =
+  insertProgram championsNbr championNumber fileContent vm
 
--- execute vm
--- vm ' = if cyclesLeft program == 0
---        then let instruction paramCode args = get instruction and args from memory at pc offset
---                  vm' = execute instruction with args on vm
---             in incrementPcByOpCode instruction paramCode (fromMaybe vm vm')
---        else vm
--- decrementCycleLeft (getCurrentProgram vm')
+loadPrograms :: Vm -> [B.ByteString] -> Vm
+loadPrograms vm fileContents =
+  let championsNbr = length fileContents
+      championNumbers = [0..championsNbr - 1]
+  in foldl (loadProgram championsNbr) vm $ zip championNumbers fileContents
+
+executeInstruction :: Instruction -> Vm -> Vm
+executeInstruction (Instruction i p size cycles) vm =
+  if i > 0 && fromIntegral i < length instructionTable
+  then let instructionHandler = instructionTable !! ((fromIntegral i) - 1)
+           vm' = instructionHandler p vm
+        in (incrementCurrentProgramPc size . setCurrentProgramCycleLeft cycles) $ fromMaybe vm vm'
+  else vm
+
+-- FIXME : move to Vm/Vm.hs ???
+getInstructionByCurrentPc :: Vm -> Instruction
+getInstructionByCurrentPc vm =
+  let offset = getCurrentProgramPc vm
+      memory' = bslice (fromIntegral offset) ((fromIntegral offset) + 32) (memory vm)
+  in runGet getInstruction $ BL.fromStrict memory'
+
+execute :: Vm -> Program -> Vm
+execute vm program =
+  let vm' = setCurrentProgramNbr program vm
+  in if cyclesLeft program == 0
+     then let i = getInstructionByCurrentPc vm'
+          in executeInstruction i vm'
+     else decrementCurrentProgramCycleLeft vm'
 
 -- FIXME : at MEM_CYCLE checks
---         insert a render VM loop?
--- play vm
---  foldl execute vm (programs vm)
+--         set all alive to false!
+play :: Vm -> Vm
+play vm = foldl execute vm (programs vm)
 
--- FIXME : how to know which user owns what?
---         set user number in graphicMemory
---         everytime something is written in memory
---         -> in setMemoryByCurrentProgramPc
--- renderMemory vm
--- for value in memory
---  color = if value == 0
---          then white
---          else getPlayerColor graphicMemory
---  result = color value
---  background color = if idx === currentProgram pc
---                     then light color
---                     else black
---  if x === screenLimit
---    x = 0
---    y += 1
---  print result x y
+gameLoop vm index = do
+  renderGame vm
+  renderStats vm
 
--- firstRendering :: Screen ()
-
--- renderStats :: Screen ()
--- renderStats = do
-
--- rendering :: Screen ()
--- rendering = do
---  renderStats vm
---  renderMemory vm
-
--- gameLoop vm
---  vm' = play vm
---  rendering vm
---  if nbrAlive vm > 0
---  then Graphics.UI.SDL.Time.delay 30
---       gameLoop vm
---  else return vm
+  let vm' = play vm
+--  if nbrAlive vm > 0 || MEM_CYCLE == 0?
+  if index < 200
+  then do liftIO $ threadDelay refreshDelay
+          gameLoop vm' (index + 1) -- vm
+  else return vm -- vm
+--          if gameState.alive
+--          then gameLoop
+--          else return
 
 main :: IO ()
 main = do
   args <- getArgs
-  -- vm = foldl load (new Vm) args
-  -- firstRendering vm >>= gameLoop screen vm
-  putStrLn "End VM"
+  if length args >= 2 && length args <= 4
+  then do
+    fileContents <- mapM B.readFile $ args
+    let vm = loadPrograms newVm fileContents
+    vm' <- renderVm vm gameLoop
+    print (programs vm')
+    putStrLn "End VM"
+  else putStrLn "usage: ./vm champion.cor [champion.cor]+"

@@ -3,27 +3,19 @@ module Vm.Vm where
 import Data.Int
 import Data.Word
 import Data.Maybe
+import Data.Bits
 
--- FIXME : can be changed for a [ until index ] ++ element ++ [ after index ]
 import Control.Lens
 import Data.ByteString.Builder
 import qualified Data.ByteString as B
+import qualified Data.ByteString.Char8 as B8
 import qualified Data.ByteString.Lazy as BL
 
+import Utils
 import Op
 
-type RegisterNbr = Word8
-type RegisterValue = Word8
-
-type ChampionNbr = Word32
-
--- FIXME : reuse ArgType
-data Parameter = PRegister Word8 | PDirect Word32 | PIndirect Word16 deriving (Show, Eq)
-
-data Instruction = Instruction {
-  instruction :: Word8,
-  params :: [Parameter]
-} deriving (Show, Eq)
+-- FIXME : reuse ArgType?
+data Parameter = PRegister RegisterNbr | PDirect Word32 | PIndirect Word16 deriving (Show, Eq)
 
 data Program = Program {
   number :: Int,
@@ -32,46 +24,106 @@ data Program = Program {
   pc :: Offset, -- eip
   carry :: Bool,
   alive :: Bool,
-  cycleLeft :: Int, -- before next instruction
-  instructions :: B.ByteString
+  cyclesLeft :: Int -- before next instruction
 } deriving (Show, Eq)
 
-newProgram :: Int -> String -> Offset -> B.ByteString -> Program
-newProgram number name pcOffset instructions = Program {
+newProgram :: Int -> String -> Offset -> Program
+newProgram number name pcOffset = Program {
   number = number,
   name = name,
   registers = replicate regNumber 0,
   pc = pcOffset,
   carry = False,
   alive = True,
-  cycleLeft = 0,
-  instructions = instructions
+  cyclesLeft = 0
 }
 
 data Vm = Vm {
   programs :: [Program],
   currentProgramNbr :: Int,
   memory :: B.ByteString,
+  graphicMemory :: B.ByteString,
   affBuffer :: String
 } deriving (Show, Eq)
 
-newVm :: [Program] -> Vm
-newVm programs = Vm {
-  programs = programs,
+newVm :: Vm
+newVm = Vm {
+  programs = [],
   currentProgramNbr = 0,
   memory = B.pack $ replicate memSize 0,
+  graphicMemory = B.pack $ replicate memSize 0,
   affBuffer = ""
 }
 
+w8stoW32 :: [Word8] -> Word32
+w8stoW32 = foldl conversion 0
+  where conversion a o = ( a `shiftL` 8) .|. fromIntegral o
+
+w32tow8s :: Word32 -> [Word8]
+w32tow8s w = [
+    fromIntegral ( w `shiftR` 24),
+    fromIntegral ( w `shiftR` 16),
+    fromIntegral ( w `shiftR` 8),
+    fromIntegral w
+  ]
+
+w8stoW32le :: [Word8] -> Word32
+w8stoW32le = foldr conversion 0
+  where conversion o a = ( a `shiftL` 8) .|. fromIntegral o
+
+w32tow8sle :: Word32 -> [Word8]
+w32tow8sle w = [
+    fromIntegral w,
+    fromIntegral ( w `shiftR` 8),
+    fromIntegral ( w `shiftR` 16),
+    fromIntegral ( w `shiftR` 24)
+  ]
+
+setMemory :: Offset -> B.ByteString -> B.ByteString -> B.ByteString
+setMemory offset memory content =
+  let contentLength = B.length content
+      memoryBeforeContent = bslice 0 (fromIntegral offset) memory
+      memoryAfterContent = bslice ((fromIntegral offset) + contentLength) (B.length memory) memory
+  in B.concat [ memoryBeforeContent, content, memoryAfterContent ]
+
+setMemorys :: Offset -> Int -> B.ByteString -> Vm -> Vm
+setMemorys offset championNbr content vm =
+  let memory' = setMemory offset (memory vm) content
+      graphicInstructions = B.pack $ replicate (B.length content) (fromIntegral championNbr)
+      graphicMemory' = setMemory offset (graphicMemory vm) graphicInstructions
+  in vm { memory = memory', graphicMemory = graphicMemory' }
+
+word32ToBytestring :: Word32 -> B.ByteString
+word32ToBytestring = B.pack . w32tow8s
+
+byteStringToWord32 :: B.ByteString -> Word32
+byteStringToWord32 = w8stoW32 . B.unpack
+
+insertProgram :: Int -> Int -> B.ByteString -> Vm -> Vm
+insertProgram championsNbr championNbr programContent vm =
+  let name = filter (/='\NUL') $ B8.unpack $ bslice nameOffset nameSize programContent
+      progSize = byteStringToWord32 $ bslice progSizeOffset progSizeSize programContent
+      instructions = bslice (headerSize + 8) (B.length programContent) programContent
+      offset = fromIntegral $ championNbr * memSize `div` championsNbr
+      cyclesLeft = B.head instructions
+
+      program = newProgram championNbr name offset
+      vm' = vm { programs = (programs vm) ++ [program] }
+  in setMemorys offset (championNbr + 1) instructions vm'
+
 setCurrentProgram :: Program -> Vm -> Vm
 setCurrentProgram program vm =
-  let programNbr = currentProgramNbr vm
-      programs' = (programs vm) & ix programNbr .~ program
+  let championNbr = currentProgramNbr vm
+      programs' = (programs vm) & ix championNbr .~ program
   in vm { programs = programs' }
 
 getCurrentProgram :: Vm -> Program
 getCurrentProgram vm =
   (programs vm) !! (currentProgramNbr vm)
+
+setCurrentProgramNbr :: Program -> Vm -> Vm
+setCurrentProgramNbr program vm =
+  vm { currentProgramNbr = (number program) }
   
 setCurrentProgramRegister :: RegisterNbr -> RegisterValue -> Vm -> Vm
 setCurrentProgramRegister registerNbr value vm =
@@ -101,27 +153,20 @@ getCurrentProgramPc vm =
   let program = getCurrentProgram vm
   in pc program
 
+getCurrentChampionNumber :: Vm -> Int
+getCurrentChampionNumber vm = number $ getCurrentProgram vm
+
 setCurrentProgramPc :: Offset -> Vm -> Vm
 setCurrentProgramPc offset vm =
   let program = getCurrentProgram vm
       program' = program { pc = offset }
   in setCurrentProgram program' vm
 
-updateMemory' :: BL.ByteString -> Offset -> BL.ByteString -> Int64 -> BL.ByteString
-updateMemory' memory offset value size =
-  let value' = value ^? ix size
-  in if size >= 0 && isJust value'
-  then let offset' = (fromIntegral offset) + size
-           memory' = memory & ix offset' .~ fromJust value'
-       in updateMemory' memory' offset value (size - 1)
-  else memory
-
-updateMemory :: B.ByteString -> Offset -> Word32 -> Int -> B.ByteString
-updateMemory memory offset value size =
-  let unpackedValue = (toLazyByteString . word32BE) $ fromIntegral value
-      lmemory = BL.fromStrict memory
-      size' = fromIntegral size :: Int64
-  in B.concat . BL.toChunks $ updateMemory' lmemory offset unpackedValue (size' - 1)
+updateMemory :: Offset -> Word32 -> Int -> Vm -> Vm
+updateMemory offset value size vm =
+  let toInsert = B.drop (4 - size) $ word32ToBytestring value
+      championNbr = getCurrentChampionNumber vm
+  in setMemorys offset championNbr toInsert vm
 
 modMemSize = flip mod memSize
 
@@ -129,9 +174,7 @@ setMemoryByCurrentProgramPc :: (Int -> Int) -> Offset -> Word32 -> Int -> Vm -> 
 setMemoryByCurrentProgramPc f offset value size vm =
   let pc = fromIntegral $ getCurrentProgramPc vm
       offset' = fromIntegral $ modMemSize $ pc + (f $ fromIntegral offset)
-      packedMemory = memory vm
-      memory' = updateMemory packedMemory offset' value size
-   in vm { memory = memory' }
+  in updateMemory offset' value size vm
 
 parameterValue :: Parameter -> Word32
 parameterValue parameter = case parameter of
@@ -146,6 +189,23 @@ getValueFromMemory f parameter size vm =
       offset = f $ fromIntegral $ parameterValue parameter
       offset' = modMemSize $ pc + offset
       memory' = memory vm
-      slice from to xs = B.take (to - from + 1) (B.drop from xs) 
-      value = slice offset' (offset' + size) memory'
-   in read $ show value
+      value = bslice offset' (offset' + size) memory'
+  -- FIXME : read dont work on null strings
+   in read $ B8.unpack value
+
+incrementCurrentProgramPc :: Int -> Vm -> Vm
+incrementCurrentProgramPc size vm =
+  let program = getCurrentProgram vm
+  in setCurrentProgram (program { pc = (pc program) + fromIntegral size }) vm
+
+decrementCurrentProgramCycleLeft :: Vm -> Vm
+decrementCurrentProgramCycleLeft vm =
+  let program = getCurrentProgram vm
+      program' = program { cyclesLeft = (cyclesLeft program) - 1 }
+  in setCurrentProgram program' vm
+
+setCurrentProgramCycleLeft :: Int -> Vm -> Vm
+setCurrentProgramCycleLeft cycles vm =
+  let program = getCurrentProgram vm
+      program' = program { cyclesLeft = cycles }
+  in setCurrentProgram program' vm
