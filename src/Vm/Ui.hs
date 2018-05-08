@@ -125,6 +125,8 @@ renderGame vm = do
 
 cyclesLeftText = "cycles left : "
 aliveText = "alive : "
+carryText = "carry : "
+pcText = "pc : "
 registerText = "registers : "
 
 drawProgramStat :: Int -> Program -> Update ()
@@ -145,13 +147,25 @@ drawProgramStat rows program = do
   drawString cyclesLeftString
 
   -- alive 
-  let aliveMargin = cyclesLeftMargin + (fromIntegral $ length cyclesLeftString) + 3
+  let aliveMargin = cyclesLeftMargin + (fromIntegral $ length cyclesLeftString) + 2
       aliveString = aliveText ++ show (alive program)
   moveCursor row aliveMargin
   drawString aliveString
 
+  -- carry
+  let carryMargin = aliveMargin + (fromIntegral $ length aliveString) + 2
+      carryString = carryText ++ show (carry program)
+  moveCursor row carryMargin
+  drawString carryString
+
+  -- pc
+  let pcMargin = carryMargin + (fromIntegral $ length carryString) + 2
+      pcString = pcText ++ (lpad 4 $ show (pc program))
+  moveCursor row pcMargin
+  drawString pcString
+
   -- registers
-  let registerMargin = aliveMargin + (fromIntegral $ length aliveString) + 3
+  let registerMargin = pcMargin + (fromIntegral $ length pcString) + 2
       registerString = registerText ++ show (registers program)
   moveCursor row registerMargin
   drawString registerString

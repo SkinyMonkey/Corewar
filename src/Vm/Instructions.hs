@@ -13,9 +13,17 @@ import Debug.Trace
 
 modIdxMod = flip mod idxMod
 
+-- FIXME : move this inside getCurrentProgramRegister and setCurrentProgramRegister
+-- transform return into Maybe
+-- then apply with <$>
 validRegister registerNbr =
   let registerNbr' = fromIntegral registerNbr
   in registerNbr' > 0 && registerNbr' < regNumber
+
+extractValue param vm = case param of
+  PRegister registerNbr -> fromIntegral $ getCurrentProgramRegister registerNbr vm
+  PDirect value -> fromIntegral $ value
+  PIndirect value -> fromIntegral $ value
 
 -- Followed by 4 bytes representing the player name.
 -- This instruction indicates that the player is alive.
@@ -33,7 +41,7 @@ ld_ f [firstParam, PRegister registerNbr] vm =
   if validRegister registerNbr
   then let value = getValueFromMemory f firstParam regSize vm
            vm' = setCurrentProgramCarry (value /= 0) vm
-       in Just $ setCurrentProgramRegister registerNbr value vm'
+       in Just $ setCurrentProgramRegister registerNbr (fromIntegral value) vm'
   else Nothing
 ld_ _ _ _ = Nothing
  
@@ -48,8 +56,8 @@ ld :: [Parameter] -> Vm -> Maybe Vm
 ld = ld_ modIdxMod
  
 -- This instruction takes 2 parameters.
--- It stores (REG_SIZE bytes) the value of the first argument
--- (always a register) in the second.
+-- It stores (REG_SIZE bytes) the value of the first argument (always a register)
+-- in the second.
 -- st r4,34 stores the value of r4 at the address (PC + (34 % IDX_MOD))
 -- st r3,r8 copies r3 in r8
 st :: [Parameter] -> Vm -> Maybe Vm
@@ -72,16 +80,16 @@ registerOperation f [PRegister r1, PRegister r2, PRegister r3] vm =
   else Nothing
 registerOperation _ _ _ = Nothing
 
-registerCarryOperation :: (RegisterValue -> RegisterValue -> RegisterValue) -> [Parameter] -> Vm -> Maybe Vm
-registerCarryOperation f [PRegister r1, PRegister r2, PRegister r3] vm =
-  let params = [PRegister r1, PRegister r2, PRegister r3]
-      vm' = registerOperation f params vm
-  in if isJust vm'
-     -- FIXME : remove fromJust, chain with <$> or <*>
-     then let registerValue = getCurrentProgramRegister r3 $ fromJust vm'
-          in setCurrentProgramCarry (registerValue /= 0) <$> vm'
-     else Nothing
-registerCarryOperation _ _ _ = Nothing
+registerCarryOperation :: (Int -> Int -> Int) -> [Parameter] -> Vm -> Maybe Vm
+registerCarryOperation f [firstParam, secondParam, PRegister registerNbr] vm =
+  if validRegister registerNbr
+  then let firstValue = extractValue firstParam vm
+           secondValue = extractValue secondParam vm
+           result = f firstValue secondValue
+           vm' = setCurrentProgramRegister registerNbr (fromIntegral result) vm
+       in Just $ setCurrentProgramCarry (result /= 0) vm'
+  else Nothing
+registerCarryOperation _ params _ = Nothing
 
 -- This instruction takes 3 registers as parameter,
 -- adds the contents of the 2 first and stores the result in the third.
@@ -113,9 +121,12 @@ xor = registerCarryOperation (Data.Bits.xor)
 -- zjmp %23 does : If carry == 1, store (PC + (23 % IDX_MOD)) in the PC.
 zjmp :: [Parameter] -> Vm -> Maybe Vm
 zjmp [PDirect offset] vm =
-  if carry (getCurrentProgram vm) == True
-  then Just $ setCurrentProgramPc offset vm
-  else Nothing
+  let currentProgram = getCurrentProgram vm
+      -- FIXME : offset is not right, not 127 but 655...
+      offset' = modIdxMod $ fromIntegral $ if offset > 32767 then (65535 - offset) * (-1) else offset
+  in if carry currentProgram == True
+     then Just $ setCurrentProgramPc (pc currentProgram + (fromIntegral offset')) vm
+     else Just $ vm
 zjmp _ _ = Nothing
  
 ldi_ :: (Int -> Int) -> [Parameter] -> Vm -> Maybe Vm
@@ -125,7 +136,7 @@ ldi_ f [firstParam, secondParam, PRegister registerNbr] vm =
            s = PIndirect $ fromIntegral $ firstValue + parameterValue secondParam
            finalValue = getValueFromMemory f s regSize vm
            vm' = setCurrentProgramCarry (finalValue /= 0) vm
-        in Just $ setCurrentProgramRegister registerNbr finalValue vm
+        in Just $ setCurrentProgramRegister registerNbr (fromIntegral finalValue) vm
   else Nothing
 ldi_ _ _ _ = Nothing
 
@@ -153,18 +164,15 @@ sti [PRegister r1, secondParam, thirdParam] vm =
      (isRegister thirdParam && not (validRegister (parameterValue thirdParam)))
   then Nothing
   else let value = fromIntegral $ getCurrentProgramRegister r1 vm
-           secondParamValue = extractValue secondParam
-           thirdParamValue = extractValue thirdParam
+           secondParamValue = extractValue secondParam vm
+           thirdParamValue = extractValue thirdParam vm
            offset = fromIntegral $ secondParamValue + thirdParamValue
+       -- FIXME : regSize is no respected, 4 is instead
        in Just $ setMemoryByCurrentProgramPc id offset value regSize vm
   where isRegister r = case r of
           PRegister _ -> True
           _ -> False
 
-        extractValue param = case param of
-          PRegister registerNbr -> fromIntegral $ getCurrentProgramRegister registerNbr vm
-          PDirect value -> fromIntegral $ value
-          PIndirect value -> fromIntegral $ value
 sti _ _ = Nothing
 
 fork_ :: (Int -> Int) -> [Parameter] -> Vm -> Maybe Vm

@@ -16,7 +16,7 @@ import Vm.UnpackInstruction
 import Vm.Instructions
 import Vm.Ui
 
--- FIXME : import from somewhere?
+-- FIXME : import from VM?
 refreshDelay = 100000
 
 loadProgram :: Int -> Vm -> (Int, B.ByteString) -> Vm
@@ -29,18 +29,15 @@ loadPrograms vm fileContents =
       championNumbers = [0..championsNbr - 1]
   in foldl (loadProgram championsNbr) vm $ zip championNumbers fileContents
 
-executeInstruction :: Instruction -> Vm -> Vm
-executeInstruction (Instruction i p size cycles) vm =
-  if i > 0 && fromIntegral i < length instructionTable
-  then let instructionHandler = instructionTable !! ((fromIntegral i) - 1)
-           vm' = instructionHandler p vm
-        in (incrementCurrentProgramPc size . setCurrentProgramCycleLeft cycles) $ fromMaybe vm vm'
-  else vm
+executeInstruction :: Vm -> Instruction -> Maybe Vm
+executeInstruction vm (Instruction handler p size cycles) =
+  let vm' = handler p vm
+  in (incrementCurrentProgramPc size . setCurrentProgramCycleLeft cycles) <$> vm'
 
--- FIXME : move to Vm/Vm.hs ???
-getInstructionByCurrentPc :: Vm -> Instruction
+getInstructionByCurrentPc :: Vm -> Maybe Instruction
 getInstructionByCurrentPc vm =
   let offset = getCurrentProgramPc vm
+      -- FIXME : circle buffer behavior
       memory' = bslice (fromIntegral offset) ((fromIntegral offset) + 32) (memory vm)
   in runGet getInstruction $ BL.fromStrict memory'
 
@@ -48,8 +45,7 @@ execute :: Vm -> Program -> Vm
 execute vm program =
   let vm' = setCurrentProgramNbr program vm
   in if cyclesLeft program == 0
-     then let i = getInstructionByCurrentPc vm'
-          in executeInstruction i vm'
+     then fromMaybe (incrementCurrentProgramPc 1 vm') (getInstructionByCurrentPc vm' >>= executeInstruction vm')
      else decrementCurrentProgramCycleLeft vm'
 
 -- FIXME : at MEM_CYCLE checks
@@ -63,10 +59,10 @@ gameLoop vm index = do
 
   let vm' = play vm
 --  if nbrAlive vm > 0 || MEM_CYCLE == 0?
-  if index < 200
+  if index < 10000
   then do liftIO $ threadDelay refreshDelay
           gameLoop vm' (index + 1) -- vm
-  else return vm -- vm
+  else return vm'
 --          if gameState.alive
 --          then gameLoop
 --          else return
@@ -78,6 +74,7 @@ main = do
   then do
     fileContents <- mapM B.readFile $ args
     let vm = loadPrograms newVm fileContents
+--    gameLoop vm 0 -- DEBUG (without ncurses)
     vm' <- renderVm vm gameLoop
     print (programs vm')
     putStrLn "End VM"

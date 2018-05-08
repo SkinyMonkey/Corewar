@@ -2,7 +2,7 @@
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 4348ce7bdf5c30ce4a383226afab4ed574fdee608d8c467622b13fc5a82faf60
+-- hash: 4b9f9102656c2a087ae688efda656a8f5248852b3ae0d581dc4bc81db625c820
 
 name:           corewar
 version:        0.1.0.0
@@ -110,6 +110,7 @@ test-suite asm-test
       ComputeOffsetsSpec
       InstructionsSpec
       ParseAsmSpec
+      UnpackInstructionSpec
       VmSpec
       Paths_corewar
   default-language: Haskell2010

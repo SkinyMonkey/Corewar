@@ -7,13 +7,14 @@ import Data.Binary.Get
 
 import Op
 import Vm.Vm
+import Vm.Instructions
 
 data Instruction = Instruction {
-  instruction :: Word8,
+  handler :: ([Parameter] -> Vm -> Maybe Vm),
   params :: [Parameter],
   instructionSize :: Int,
   cycles :: Int
-} deriving (Show, Eq)
+}
 
 registerMask = shiftL 1 6 :: Word8 -- 0b01000000
 directMask   = shiftL 2 6 :: Word8 -- 0b10000000
@@ -44,10 +45,8 @@ parseByOpCode hasIndex opCode = do
 
 getInstructionSize :: [Parameter] -> Bool -> Bool -> Int
 getInstructionSize params hasIndex hasOpCode =
-  let size = foldl compute 0 params
-  in if hasOpCode
-     then 3 + size -- instruction + opcode -- FIXME: why 3, should be 2
-     else 2 + size -- instruction -- FIXME : why 2, should be 1
+  let acc = if hasOpCode then 2 else 1
+  in foldl compute acc params
   where
     compute :: Int -> Parameter -> Int
     compute acc el = case el of
@@ -55,15 +54,24 @@ getInstructionSize params hasIndex hasOpCode =
       PIndirect _ -> acc + 2 -- 2 bytes, sizeOf word16
       PDirect   _ -> acc + (if hasIndex then 2 else 4) -- ..
 
-getInstruction :: Get Instruction
+getParameters hasOpCode hasIndex =
+  if hasOpCode 
+  then getWord8 >>= parseByOpCode hasIndex
+  else parseByOpCode hasIndex directMask -- We know it should be a direct
+
+-- FIXME : Get (Maybe Instruction)
+--         -> check opCode is ok with validOpCode
+--         -> check that params are valid
+getInstruction :: Get (Maybe Instruction)
 getInstruction = do
   instruction <- getWord8
-  let hasIndex = (instruction `elem` haveIndexInstructions)
-      hasOpCode = instruction `elem` noOpCodeInstructions
-  params <- if hasOpCode 
-           then parseByOpCode hasIndex directMask -- getWord32be  -- False?
-           else getWord8 >>= -- FIXME : is it semantically correct?
-                parseByOpCode hasIndex
-  let size = getInstructionSize params hasIndex hasOpCode
-      cycles' = nbrCycles (opsbyCode !! fromIntegral (instruction - 1))
-  return $ Instruction instruction params size cycles'
+  if instruction > 0 && fromIntegral instruction < (length instructionTable)
+  then do 
+       let hasIndex =  instruction `elem` haveIndexInstructions
+           hasOpCode = not $ instruction `elem` noOpCodeInstructions
+       params <- getParameters hasOpCode hasIndex
+       let size = getInstructionSize params hasIndex hasOpCode
+           cycles' = nbrCycles (opsbyCode !! fromIntegral (instruction - 1))
+           handler = instructionTable !! ((fromIntegral instruction) - 1)
+       return $ Just $ Instruction handler params size cycles'
+  else return $ Nothing -- error $ "BAD INSTRUCTION : " ++ show instruction -- Nothing

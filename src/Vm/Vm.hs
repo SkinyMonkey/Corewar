@@ -4,6 +4,7 @@ import Data.Int
 import Data.Word
 import Data.Maybe
 import Data.Bits
+import Foreign.Storable
 
 import Control.Lens
 import Data.ByteString.Builder
@@ -59,6 +60,10 @@ w8stoW32 :: [Word8] -> Word32
 w8stoW32 = foldl conversion 0
   where conversion a o = ( a `shiftL` 8) .|. fromIntegral o
 
+w8stoW16 :: [Word8] -> Word16
+w8stoW16 = foldl conversion 0
+  where conversion a o = ( a `shiftL` 8) .|. fromIntegral o
+
 w32tow8s :: Word32 -> [Word8]
 w32tow8s w = [
     fromIntegral ( w `shiftR` 24),
@@ -79,9 +84,12 @@ w32tow8sle w = [
     fromIntegral ( w `shiftR` 24)
   ]
 
+modMemSize = flip mod memSize
+
 setMemory :: Offset -> B.ByteString -> B.ByteString -> B.ByteString
 setMemory offset memory content =
   let contentLength = B.length content
+      offset' = modMemSize $ fromIntegral offset
       memoryBeforeContent = bslice 0 (fromIntegral offset) memory
       memoryAfterContent = bslice ((fromIntegral offset) + contentLength) (B.length memory) memory
   in B.concat [ memoryBeforeContent, content, memoryAfterContent ]
@@ -159,7 +167,7 @@ getCurrentChampionNumber vm = number $ getCurrentProgram vm
 setCurrentProgramPc :: Offset -> Vm -> Vm
 setCurrentProgramPc offset vm =
   let program = getCurrentProgram vm
-      program' = program { pc = offset }
+      program' = program { pc = fromIntegral $ modMemSize $ fromIntegral offset }
   in setCurrentProgram program' vm
 
 updateMemory :: Offset -> Word32 -> Int -> Vm -> Vm
@@ -168,12 +176,10 @@ updateMemory offset value size vm =
       championNbr = getCurrentChampionNumber vm
   in setMemorys offset championNbr toInsert vm
 
-modMemSize = flip mod memSize
-
 setMemoryByCurrentProgramPc :: (Int -> Int) -> Offset -> Word32 -> Int -> Vm -> Vm
 setMemoryByCurrentProgramPc f offset value size vm =
   let pc = fromIntegral $ getCurrentProgramPc vm
-      offset' = fromIntegral $ modMemSize $ pc + (f $ fromIntegral offset)
+      offset' = fromIntegral $ pc + (f $ fromIntegral offset)
   in updateMemory offset' value size vm
 
 parameterValue :: Parameter -> Word32
@@ -183,15 +189,14 @@ parameterValue parameter = case parameter of
         PDirect value -> fromIntegral value
 
 -- rename this one to getParameterFromMemory
-getValueFromMemory :: Read a => (Int -> Int) -> Parameter -> Int -> Vm -> a
+getValueFromMemory :: (Int -> Int) -> Parameter -> Int -> Vm -> Word32
 getValueFromMemory f parameter size vm =
   let pc = fromIntegral $ getCurrentProgramPc vm
       offset = f $ fromIntegral $ parameterValue parameter
       offset' = modMemSize $ pc + offset
       memory' = memory vm
       value = bslice offset' (offset' + size) memory'
-  -- FIXME : read dont work on null strings
-   in read $ B8.unpack value
+   in w8stoW32 $ B.unpack value
 
 incrementCurrentProgramPc :: Int -> Vm -> Vm
 incrementCurrentProgramPc size vm =
@@ -209,3 +214,17 @@ setCurrentProgramCycleLeft cycles vm =
   let program = getCurrentProgram vm
       program' = program { cyclesLeft = cycles }
   in setCurrentProgram program' vm
+
+bitmasks = [ 3 `shiftL` x | x <- [0,2,4,6] ]
+
+-- Apply bitmasks from right to left
+-- As soon as a valid value (>0) is met, a flag is set
+-- Any value == 0 after that will make the opCode invalid
+validOpCode :: Word8 -> Bool
+validOpCode opCode =
+  fst $ foldl (valid opCode) (False, False) bitmasks
+  where
+    valid :: Word8 ->  (Bool, Bool) -> Word8 -> (Bool, Bool)
+    valid opCode (False, False) mask = if ((opCode .&. mask) > 0) then (True, True) else (False, False)
+    valid opCode (True, True)   mask = if ((opCode .&. mask) > 0) then (True, True) else (False, True)
+    valid opCode (False, True)  _    = (False, True)
