@@ -10,7 +10,7 @@ import Vm.Vm
 import Vm.Instructions
 
 data Instruction = Instruction {
-  handler :: ([Parameter] -> Vm -> Maybe Vm),
+  handler :: [Parameter] -> Vm -> Maybe Vm,
   params :: [Parameter],
   instructionSize :: Int,
   cycles :: Int
@@ -34,14 +34,14 @@ getParameter hasIndex opCode
 
 -- FIXME : replace by mapM_
 --         zip opCode << 2 * paramIndex?
-parseByOpCode :: Bool -> Word8 -> Get [Parameter]
+parseByOpCode :: Bool -> Word8 -> Get (Word8, [Parameter])
 parseByOpCode hasIndex opCode = do
   empty <- isEmpty
   if empty || opCode == 0
-    then return []
+    then return (opCode, [])
     else do parameter <- getParameter hasIndex opCode
-            parameters <- parseByOpCode hasIndex (shiftL opCode 2) -- safe?
-            return (parameter:parameters)
+            (_, parameters) <- parseByOpCode hasIndex (shiftL opCode 2) -- safe?
+            return (opCode, parameter:parameters)
 
 getInstructionSize :: [Parameter] -> Bool -> Bool -> Int
 getInstructionSize params hasIndex hasOpCode =
@@ -59,19 +59,50 @@ getParameters hasOpCode hasIndex =
   then getWord8 >>= parseByOpCode hasIndex
   else parseByOpCode hasIndex directMask -- We know it should be a direct
 
--- FIXME : Get (Maybe Instruction)
---         -> check opCode is ok with validOpCode
---         -> check that params are valid
+validInstruction instruction = instruction > 0 && fromIntegral instruction < length instructionTable
+
+validParams =
+  foldl isValid True
+  where
+    validRegister registerNbr =
+      let registerNbr' = fromIntegral registerNbr
+      in registerNbr' > 0 && registerNbr' < regNumber
+
+    isValid :: Bool -> Parameter -> Bool
+    isValid acc el =
+      case el of 
+      PRegister registerNbr -> acc && validRegister registerNbr
+      _ -> acc && True
+
+bitmasks = [ 3 `shiftL` x | x <- [0,2,4,6] ]
+
+-- Apply bitmasks from right to left
+-- As soon as a valid value (>0) is met, a flag is set
+-- Any value == 0 after that will make the opCode invalid
+validOpCode :: Word8 -> Bool
+validOpCode opCode =
+  fst $ foldl (valid opCode) (False, False) bitmasks
+  where
+    valid :: Word8 ->  (Bool, Bool) -> Word8 -> (Bool, Bool)
+    valid opCode (False, False) mask = if (opCode .&. mask) > 0 then (True, True) else (False, False)
+    valid opCode (True, True)   mask = (opCode .&. mask > 0, True)
+    valid opCode (False, True)  _    = (False, True)
+
 getInstruction :: Get (Maybe Instruction)
 getInstruction = do
   instruction <- getWord8
-  if instruction > 0 && fromIntegral instruction < (length instructionTable)
+  if validInstruction instruction
   then do 
        let hasIndex =  instruction `elem` haveIndexInstructions
-           hasOpCode = not $ instruction `elem` noOpCodeInstructions
-       params <- getParameters hasOpCode hasIndex
-       let size = getInstructionSize params hasIndex hasOpCode
-           cycles' = nbrCycles (opsbyCode !! fromIntegral (instruction - 1))
-           handler = instructionTable !! ((fromIntegral instruction) - 1)
-       return $ Just $ Instruction handler params size cycles'
-  else return $ Nothing -- error $ "BAD INSTRUCTION : " ++ show instruction -- Nothing
+           hasOpCode = instruction `notElem` noOpCodeInstructions
+       (opCode, params) <- getParameters hasOpCode hasIndex
+
+       if validOpCode opCode && validParams params
+       then do
+            let size = getInstructionSize params hasIndex hasOpCode
+                cycles' = nbrCycles (opsbyCode !! (fromIntegral instruction - 1))
+                handler = instructionTable !! (fromIntegral instruction - 1)
+            return $ Just $ Instruction handler params size cycles'
+
+       else return Nothing
+  else return Nothing -- error $ "BAD INSTRUCTION : " ++ show instruction -- Nothing

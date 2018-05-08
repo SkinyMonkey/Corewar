@@ -40,7 +40,7 @@ color2 = ColorBlue
 color3 = ColorRed
 color4 = ColorCyan
 
-declareColors = do
+declareColors =
   -- defineColor ColorWhite 300 300 300
   -- defineColor 42 128 128 128
   -- newColorID (ColorBlack + 8) ColorBlack 42
@@ -78,7 +78,7 @@ declareColors = do
 drawOneCell defaultColor rowIndex (el, playerColor, cellCol) = do
   moveCursor rowIndex (cellCol + leftMargin)
   setColor playerColor
-  drawString $ (if el < 16 then "0" else "") ++ (showHex el "")
+  drawString $ (if el < 16 then "0" else "") ++ showHex el ""
   setColor defaultColor
   drawString " "
 
@@ -86,13 +86,13 @@ colorRow offset pcs colors rowLength row =
   let isPc offset = offset `elem` pcs
       rowOffsets = [fromIntegral offset.. fromIntegral (offset + fromIntegral rowLength)] :: [Offset];
 
-  in [ colors !! if isPc offset then (fromIntegral value) + 4 else fromIntegral value
+  in [ colors !! if isPc offset then fromIntegral value + 4 else fromIntegral value
      | (value, offset) <- zip row rowOffsets ]
 
 drawRow :: [Integer] -> [Offset] -> [ColorID] -> [Word8] -> [Word8] -> Integer -> Integer -> Update ()
 drawRow cellCols pcs colors memory graphicMemory rowIndex rowLength =
   let offset = fromIntegral $ (rowIndex - 1) * rowLength
-      defaultColor = colors !! 0
+      defaultColor = head colors
       getRow = slice offset (offset + fromIntegral rowLength)
 
       gameRow = getRow memory
@@ -116,10 +116,10 @@ renderGame vm = do
   colors <- declareColors
   updateWindow w $ do
     (rows, cols) <- windowSize
-    let rowLength = (fromIntegral $ cols `div` cellSize) - 1
+    let rowLength = fromIntegral  (cols `div` cellSize) - 1
         unpackedMemory = B.unpack $ memory vm
         unpackedGraphicMemory = B.unpack $ graphicMemory vm
-        pcs = map (\p -> pc p) (programs vm)
+        pcs = map pc (programs vm)
     drawMemory pcs colors rows rowLength unpackedMemory unpackedGraphicMemory
   render
 
@@ -132,7 +132,7 @@ registerText = "registers : "
 drawProgramStat :: Int -> Program -> Update ()
 drawProgramStat rows program = do
   let championNbr = number program
-      row = ((fromIntegral rows) - 4 + (fromIntegral championNbr))
+      row = fromIntegral rows - 4 + fromIntegral championNbr
 
   -- champion number
   let championNumberString = "#" ++ show championNbr
@@ -140,32 +140,32 @@ drawProgramStat rows program = do
   drawString championNumberString
 
   -- cycles left
-  let cyclesLeftMargin = leftMargin + (fromIntegral $ length championNumberString) + 1
+  let cyclesLeftMargin = leftMargin + fromIntegral (length championNumberString) + 1
       cycles = cyclesLeft program
-      cyclesLeftString = cyclesLeftText ++ (lpad 3 $ show cycles)
+      cyclesLeftString = cyclesLeftText ++ lpad 3 (show cycles)
   moveCursor row cyclesLeftMargin
   drawString cyclesLeftString
 
   -- alive 
-  let aliveMargin = cyclesLeftMargin + (fromIntegral $ length cyclesLeftString) + 2
+  let aliveMargin = cyclesLeftMargin + fromIntegral (length cyclesLeftString) + 2
       aliveString = aliveText ++ show (alive program)
   moveCursor row aliveMargin
   drawString aliveString
 
   -- carry
-  let carryMargin = aliveMargin + (fromIntegral $ length aliveString) + 2
+  let carryMargin = aliveMargin + fromIntegral (length aliveString) + 2
       carryString = carryText ++ show (carry program)
   moveCursor row carryMargin
   drawString carryString
 
   -- pc
-  let pcMargin = carryMargin + (fromIntegral $ length carryString) + 2
-      pcString = pcText ++ (lpad 4 $ show (pc program))
+  let pcMargin = carryMargin + fromIntegral (length carryString) + 2
+      pcString = pcText ++ lpad 4 (show (pc program))
   moveCursor row pcMargin
   drawString pcString
 
   -- registers
-  let registerMargin = pcMargin + (fromIntegral $ length pcString) + 2
+  let registerMargin = pcMargin + fromIntegral (length pcString) + 2
       registerString = registerText ++ show (registers program)
   moveCursor row registerMargin
   drawString registerString
@@ -194,7 +194,7 @@ renderFrame = do
       drawBottomPane
     render
 
-renderVm vm gameLoop = do
+renderVm vm gameLoop =
   runCurses $ do
     setEcho False
 

@@ -91,7 +91,7 @@ setMemory offset memory content =
   let contentLength = B.length content
       offset' = modMemSize $ fromIntegral offset
       memoryBeforeContent = bslice 0 (fromIntegral offset) memory
-      memoryAfterContent = bslice ((fromIntegral offset) + contentLength) (B.length memory) memory
+      memoryAfterContent = bslice (fromIntegral offset + contentLength) (B.length memory) memory
   in B.concat [ memoryBeforeContent, content, memoryAfterContent ]
 
 setMemorys :: Offset -> Int -> B.ByteString -> Vm -> Vm
@@ -116,36 +116,36 @@ insertProgram championsNbr championNbr programContent vm =
       cyclesLeft = B.head instructions
 
       program = newProgram championNbr name offset
-      vm' = vm { programs = (programs vm) ++ [program] }
+      vm' = vm { programs = programs vm ++ [program] }
   in setMemorys offset (championNbr + 1) instructions vm'
 
 setCurrentProgram :: Program -> Vm -> Vm
 setCurrentProgram program vm =
   let championNbr = currentProgramNbr vm
-      programs' = (programs vm) & ix championNbr .~ program
+      programs' = programs vm & ix championNbr .~ program
   in vm { programs = programs' }
 
 getCurrentProgram :: Vm -> Program
 getCurrentProgram vm =
-  (programs vm) !! (currentProgramNbr vm)
+  programs vm !! currentProgramNbr vm
 
 setCurrentProgramNbr :: Program -> Vm -> Vm
 setCurrentProgramNbr program vm =
-  vm { currentProgramNbr = (number program) }
+  vm { currentProgramNbr = number program }
   
 setCurrentProgramRegister :: RegisterNbr -> RegisterValue -> Vm -> Vm
 setCurrentProgramRegister registerNbr value vm =
   let program = getCurrentProgram vm
       registerNbr' = fromIntegral registerNbr
       value' = fromIntegral value
-      registers' = (registers program) & ix registerNbr' .~ value'
+      registers' = registers program & ix registerNbr' .~ value'
       program' = program { registers = registers' }
   in setCurrentProgram program' vm
 
 getCurrentProgramRegister :: RegisterNbr -> Vm -> RegisterValue
 getCurrentProgramRegister registerNbr vm =
   let program = getCurrentProgram vm
-  in fromIntegral $ (registers program) !! fromIntegral registerNbr
+  in fromIntegral $ registers program !! fromIntegral registerNbr
 
 setCurrentProgramCarry :: Bool -> Vm -> Vm
 setCurrentProgramCarry flag vm =
@@ -179,7 +179,7 @@ updateMemory offset value size vm =
 setMemoryByCurrentProgramPc :: (Int -> Int) -> Offset -> Word32 -> Int -> Vm -> Vm
 setMemoryByCurrentProgramPc f offset value size vm =
   let pc = fromIntegral $ getCurrentProgramPc vm
-      offset' = fromIntegral $ pc + (f $ fromIntegral offset)
+      offset' = fromIntegral $ pc + f (fromIntegral offset)
   in updateMemory offset' value size vm
 
 parameterValue :: Parameter -> Word32
@@ -201,12 +201,12 @@ getValueFromMemory f parameter size vm =
 incrementCurrentProgramPc :: Int -> Vm -> Vm
 incrementCurrentProgramPc size vm =
   let program = getCurrentProgram vm
-  in setCurrentProgram (program { pc = (pc program) + fromIntegral size }) vm
+  in setCurrentProgram (program { pc = pc program + fromIntegral size }) vm
 
 decrementCurrentProgramCycleLeft :: Vm -> Vm
 decrementCurrentProgramCycleLeft vm =
   let program = getCurrentProgram vm
-      program' = program { cyclesLeft = (cyclesLeft program) - 1 }
+      program' = program { cyclesLeft = cyclesLeft program - 1 }
   in setCurrentProgram program' vm
 
 setCurrentProgramCycleLeft :: Int -> Vm -> Vm
@@ -215,16 +215,7 @@ setCurrentProgramCycleLeft cycles vm =
       program' = program { cyclesLeft = cycles }
   in setCurrentProgram program' vm
 
-bitmasks = [ 3 `shiftL` x | x <- [0,2,4,6] ]
-
--- Apply bitmasks from right to left
--- As soon as a valid value (>0) is met, a flag is set
--- Any value == 0 after that will make the opCode invalid
-validOpCode :: Word8 -> Bool
-validOpCode opCode =
-  fst $ foldl (valid opCode) (False, False) bitmasks
-  where
-    valid :: Word8 ->  (Bool, Bool) -> Word8 -> (Bool, Bool)
-    valid opCode (False, False) mask = if ((opCode .&. mask) > 0) then (True, True) else (False, False)
-    valid opCode (True, True)   mask = if ((opCode .&. mask) > 0) then (True, True) else (False, True)
-    valid opCode (False, True)  _    = (False, True)
+getParameterValue f param vm = case param of
+  PRegister registerNbr -> fromIntegral $ getCurrentProgramRegister registerNbr vm
+  PDirect value -> fromIntegral value
+  PIndirect value -> fromIntegral $ getValueFromMemory f param 4 vm

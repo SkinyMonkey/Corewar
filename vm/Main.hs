@@ -38,7 +38,7 @@ getInstructionByCurrentPc :: Vm -> Maybe Instruction
 getInstructionByCurrentPc vm =
   let offset = getCurrentProgramPc vm
       -- FIXME : circle buffer behavior
-      memory' = bslice (fromIntegral offset) ((fromIntegral offset) + 32) (memory vm)
+      memory' = bslice (fromIntegral offset) (fromIntegral offset + 32) (memory vm)
   in runGet getInstruction $ BL.fromStrict memory'
 
 execute :: Vm -> Program -> Vm
@@ -72,7 +72,7 @@ main = do
   args <- getArgs
   if length args >= 2 && length args <= 4
   then do
-    fileContents <- mapM B.readFile $ args
+    fileContents <- mapM B.readFile args
     let vm = loadPrograms newVm fileContents
 --    gameLoop vm 0 -- DEBUG (without ncurses)
     vm' <- renderVm vm gameLoop
