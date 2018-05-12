@@ -60,47 +60,34 @@ getParameters hasOpCode hasIndex =
   else parseByOpCode hasIndex directMask -- We know it should be a direct
 
 validInstruction instruction = instruction > 0 && fromIntegral instruction < length instructionTable
+validRegister registerNbr =
+  let registerNbr' = fromIntegral registerNbr
+  in registerNbr' > 0 && registerNbr' < regNumber
 
--- FIXME : check params against Op table?
---         check championNbr number in case of a live instruction
---
---         -- FIXME : list of list, zip (param, legalParameters) together
---         legalParameters = opTable !! instruction
---
---         zip params legalParameters
---
---         isValid Bool -> (Parameter, [ArgType()]) -> Bool
---         isvalid acc (el, legalParameters) =
---          case el of
---            PRegister registerNbr -> register `elem` legalParameters
---                                  && validRegister registerNbr
---                                  && acc
---            PDirect value -> direct `elem` legalParameters
---                          && if instruction == alive
---                             then value > 0 && value < fromIntegral championNbr < length (programs vm)
---                             else True
---                          && acc
---            PIndirect value -> indirect `elem` legalParameters && acc
---
-validParams =
-  foldl isValid True
-  where
-    validRegister registerNbr =
-      let registerNbr' = fromIntegral registerNbr
-      in registerNbr' > 0 && registerNbr' < regNumber
+validParameter :: InstructionCode -> Int -> Bool -> (Parameter, [Parameter]) -> Bool
+validParameter instruction championsNbr acc (el, legalParameters) = case el of
+   Register registerNbr -> register `elem` legalParameters
+                         && validRegister registerNbr
+                         && acc
+   Indirect value -> indirect `elem` legalParameters && acc
+   Direct value -> direct `elem` legalParameters
+                 && if instruction == 0x01 -- alive
+                    then value > 0 && fromIntegral value < championsNbr
+                    else True
+                 && acc
 
-    isValid :: Bool -> Parameter -> Bool
-    isValid acc el =
-      case el of 
-      Register registerNbr -> acc && validRegister registerNbr
-      _ -> acc && True
+validParameters :: InstructionCode -> Int -> [Parameter] -> Bool
+validParameters instruction championsNbr params =
+  let legalParameters = argsType (opsbyCode !! fromIntegral instruction)
+  in foldl (validParameter instruction championsNbr) True $ zip params legalParameters
+
+-- validOpCode : Apply bitmasks from right to left
+-- As soon as a valid value (>0) is met, a flag is set
+-- Any value == 0 after that will make the opCode invalid
 
 bitmasks = [ 3 `shiftL` x | x <- [0,2,4,6] ]
 
--- Apply bitmasks from right to left
--- As soon as a valid value (>0) is met, a flag is set
--- Any value == 0 after that will make the opCode invalid
-validOpCode :: Word8 -> Bool
+validOpCode :: OpCode -> Bool
 validOpCode opCode =
   fst $ foldl (valid opCode) (False, False) bitmasks
   where
@@ -109,8 +96,8 @@ validOpCode opCode =
     valid opCode (True, True)   mask = (opCode .&. mask > 0, True)
     valid opCode (False, True)  _    = (False, True)
 
-getInstruction :: Get (Maybe Instruction)
-getInstruction = do
+getInstruction :: Int -> Get (Maybe Instruction)
+getInstruction championsNbr = do
   instruction <- getWord8
   if validInstruction instruction
   then do 
@@ -118,7 +105,7 @@ getInstruction = do
            hasOpCode = instruction `notElem` noOpCodeInstructions
        (opCode, params) <- getParameters hasOpCode hasIndex
 
-       if validOpCode opCode && validParams params
+       if validOpCode opCode && validParameters instruction championsNbr params
        then do
             let size = getInstructionSize params hasIndex hasOpCode
                 cycles' = nbrCycles (opsbyCode !! (fromIntegral instruction - 1))

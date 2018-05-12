@@ -33,6 +33,8 @@ regSize = 1 :: Int
 indSize = 2 :: Int
 dirSize = 4 :: Int
 
+type InstructionCode = Word8
+type OpCode = Word8
 type Offset = Word32
 type RegisterNbr = Word8
 type RegisterValue = Word8

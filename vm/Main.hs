@@ -42,7 +42,7 @@ getInstructionByCurrentPc vm =
   let offset = getCurrentProgramPc vm
       -- FIXME : circle buffer behavior
       memory' = bslice (fromIntegral offset) (fromIntegral offset + 32) (memory vm)
-  in runGet getInstruction $ BL.fromStrict memory'
+  in runGet (getInstruction (length (programs vm))) $ BL.fromStrict memory'
 
 execute :: Vm -> Program -> Vm
 execute vm program =
