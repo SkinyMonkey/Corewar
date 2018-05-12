@@ -2,7 +2,7 @@
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 4b9f9102656c2a087ae688efda656a8f5248852b3ae0d581dc4bc81db625c820
+-- hash: fedc5eae4481a31f45d815f68d6efd1193e1c57541c6f1bf8b0685004f0fdfc2
 
 name:           corewar
 version:        0.1.0.0
@@ -71,24 +71,7 @@ executable asm
       Paths_corewar
   default-language: Haskell2010
 
-executable vm
-  main-is: Main.hs
-  hs-source-dirs:
-      vm
-  ghc-options: -threaded -rtsopts -with-rtsopts=-N -Wall -Wextra -O3
-  build-depends:
-      base >=4.7 && <5
-    , binary
-    , bytestring
-    , containers
-    , corewar
-    , lens
-    , ncurses >=0.2
-  other-modules:
-      Paths_corewar
-  default-language: Haskell2010
-
-test-suite asm-test
+test-suite test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   hs-source-dirs:

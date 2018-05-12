@@ -10,17 +10,8 @@ import Foreign.Storable
 import Asm.Header
 import Op
 
-type ArgContent = String
-type Parameter = ArgType ArgContent
 type Instruction = (Word8, [Parameter], Offset)
-type EvaluatedParameter = ArgType Word32
-type EvaluatedInstruction = (Word8, [EvaluatedParameter])
-
-instance Functor ArgType where
-  fmap f (Register x) = Register (f x)
-  fmap f (Indirect x) = Indirect (f x)
-  fmap f (Direct x) = Direct (f x)
-  fmap f (Label x) = Label (f x)
+type EvaluatedInstruction = (Word8, [Parameter])
 
 getHeader :: ChampionData -> Header
 getHeader = header
@@ -57,7 +48,7 @@ incLineNbr self = self {lineNbr = nbr + 1}
   where nbr = getLineNbr self
 
 -- FIXME : use sizeOf Word32, Word16
-argByteSize :: Bool -> ArgType ArgContent -> Word32
+argByteSize :: Bool -> Parameter -> Word32
 argByteSize instructionHasIndex arg =
   case arg of
     Register _ -> 1
@@ -67,7 +58,7 @@ argByteSize instructionHasIndex arg =
 
 -- FIXME : create an OpCode type
 --         use sizeOf code
-argsByteSize :: Word8 -> [ArgType String] -> Word32
+argsByteSize :: Word8 -> [Parameter] -> Word32
 argsByteSize code args =
   let argSize = sum (map (argByteSize (code `elem` haveIndexInstructions)) args)
   in if code `elem` noOpCodeInstructions
@@ -102,7 +93,7 @@ resetByteCounter self = self {byteCounter = 0}
 setByteCounter :: ChampionData -> Word32 -> ChampionData
 setByteCounter self value = self {byteCounter = value}
 
-incCounter :: ChampionData -> Word8 -> [ArgType String] -> ChampionData
+incCounter :: ChampionData -> Word8 -> [Parameter] -> ChampionData
 incCounter self code args =
   let newByteCounter = byteCounter self + argsByteSize code args
       newHeader = setProgSize (header self) newByteCounter

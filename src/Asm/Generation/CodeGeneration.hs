@@ -30,7 +30,7 @@ printBinary value = "0b" ++ (lpad 8 $ showIntAtBase 2 intToDigit value "")
 -- 01 register
 -- 10 direct
 -- 11 indirect
-encodeParameter :: (Int, Word8) -> EvaluatedParameter -> (Int, Word8)
+encodeParameter :: (Int, Word8) -> Parameter -> (Int, Word8)
 encodeParameter (index, opCode) parameter =
  let newValue = case parameter of
                    Register _ -> 0x01
@@ -38,7 +38,7 @@ encodeParameter (index, opCode) parameter =
                    Indirect _ -> 0x03
  in (index - 2, opCode .|. (shiftL newValue index))
 
-generateOpCode :: [EvaluatedParameter] -> Word8
+generateOpCode :: [Parameter] -> Word8
 generateOpCode parameters =
   let emptyByte = 0
       maximumIndex = (sizeOf emptyByte * 8) - 2
@@ -46,7 +46,7 @@ generateOpCode parameters =
   in opCode
 
 -- Labels are indirect now
-serializeParameter :: ChampionData -> Word8 -> EvaluatedParameter -> Put
+serializeParameter :: ChampionData -> Word8 -> Parameter -> Put
 serializeParameter championData instructionCode parameter =
   case parameter of
     Register parameterValue -> putWord8 (fromIntegral parameterValue :: Word8)
@@ -58,7 +58,7 @@ serializeParameter championData instructionCode parameter =
  
 -- FIXME : should return a buffer instead of an empty monad
 --         foldl?
-serializeParameters :: ChampionData -> Word8 -> [EvaluatedParameter] -> PutM ()
+serializeParameters :: ChampionData -> Word8 -> [Parameter] -> PutM ()
 serializeParameters championData instructionCode parameters = 
   mapM_ (serializeParameter championData instructionCode) parameters
 

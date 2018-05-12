@@ -10,7 +10,7 @@ import Vm.Vm
 import Vm.Instructions
 
 data Instruction = Instruction {
-  handler :: [Parameter] -> Vm -> Maybe Vm,
+  index :: Int,
   params :: [Parameter],
   instructionSize :: Int,
   cycles :: Int
@@ -23,9 +23,9 @@ currentMask  = shiftL 3 6 -- 0b11000000
 
 getParameter :: Bool -> Word8 -> Get Parameter
 getParameter hasIndex opCode
-  | currentParameter == registerMask = PRegister <$> getWord8
-  | currentParameter == indirectMask = PIndirect <$> getWord16be
-  | currentParameter == directMask   = PDirect   <$> (if hasIndex then fromIntegral <$> getWord16be else getWord32be)
+  | currentParameter == registerMask = Register <$> getWord8
+  | currentParameter == indirectMask = Indirect <$> getWord16be
+  | currentParameter == directMask   = Direct   <$> (if hasIndex then fromIntegral <$> getWord16be else getWord32be)
   -- FIXME : if we try to decode a bad opCode
   --         could be == 0b00000000
   --         what to do then, error will just crash the Vm
@@ -50,9 +50,9 @@ getInstructionSize params hasIndex hasOpCode =
   where
     compute :: Int -> Parameter -> Int
     compute acc el = case el of
-      PRegister _ -> acc + 1 -- 1 byte, sizeOf word8
-      PIndirect _ -> acc + 2 -- 2 bytes, sizeOf word16
-      PDirect   _ -> acc + (if hasIndex then 2 else 4) -- ..
+      Register _ -> acc + 1 -- 1 byte, sizeOf word8
+      Indirect _ -> acc + 2 -- 2 bytes, sizeOf word16
+      Direct   _ -> acc + (if hasIndex then 2 else 4) -- ..
 
 getParameters hasOpCode hasIndex =
   if hasOpCode 
@@ -61,6 +61,27 @@ getParameters hasOpCode hasIndex =
 
 validInstruction instruction = instruction > 0 && fromIntegral instruction < length instructionTable
 
+-- FIXME : check params against Op table?
+--         check championNbr number in case of a live instruction
+--
+--         -- FIXME : list of list, zip (param, legalParameters) together
+--         legalParameters = opTable !! instruction
+--
+--         zip params legalParameters
+--
+--         isValid Bool -> (Parameter, [ArgType()]) -> Bool
+--         isvalid acc (el, legalParameters) =
+--          case el of
+--            PRegister registerNbr -> register `elem` legalParameters
+--                                  && validRegister registerNbr
+--                                  && acc
+--            PDirect value -> direct `elem` legalParameters
+--                          && if instruction == alive
+--                             then value > 0 && value < fromIntegral championNbr < length (programs vm)
+--                             else True
+--                          && acc
+--            PIndirect value -> indirect `elem` legalParameters && acc
+--
 validParams =
   foldl isValid True
   where
@@ -71,7 +92,7 @@ validParams =
     isValid :: Bool -> Parameter -> Bool
     isValid acc el =
       case el of 
-      PRegister registerNbr -> acc && validRegister registerNbr
+      Register registerNbr -> acc && validRegister registerNbr
       _ -> acc && True
 
 bitmasks = [ 3 `shiftL` x | x <- [0,2,4,6] ]
@@ -101,8 +122,8 @@ getInstruction = do
        then do
             let size = getInstructionSize params hasIndex hasOpCode
                 cycles' = nbrCycles (opsbyCode !! (fromIntegral instruction - 1))
-                handler = instructionTable !! (fromIntegral instruction - 1)
-            return $ Just $ Instruction handler params size cycles'
+                index = fromIntegral instruction - 1
+            return $ Just $ Instruction index params size cycles'
 
        else return Nothing
   else return Nothing -- error $ "BAD INSTRUCTION : " ++ show instruction -- Nothing

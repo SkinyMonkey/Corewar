@@ -46,7 +46,7 @@ parseOp :: [String] -> ChampionData -> ParseResult
 parseOp [] _ = Left "Empty line"
 parseOp (candidate:args) championData =
   let op = byMnemonic candidate
-      argTypes = checkArgTypes op args championData
+      argTypes = checkParameters op args championData
    in flip fmap argTypes $ addInstruction championData op
 
 splitOnCommas :: [String] -> [String]

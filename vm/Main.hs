@@ -30,9 +30,12 @@ loadPrograms vm fileContents =
   in foldl (loadProgram championsNbr) vm $ zip championNumbers fileContents
 
 executeInstruction :: Vm -> Instruction -> Maybe Vm
-executeInstruction vm (Instruction handler p size cycles) =
-  let vm' = handler p vm
-  in (incrementCurrentProgramPc size . setCurrentProgramCycleLeft cycles) <$> vm'
+executeInstruction vm (Instruction index p size cycles) =
+  let handler = instructionTable !! index
+      vm' = handler p vm
+      -- FIXME : index `elem` leavePcIntact
+      increment = if index == 0x08 then id else incrementCurrentProgramPc size
+  in (increment . setCurrentProgramCycleLeft cycles) <$> vm'
 
 getInstructionByCurrentPc :: Vm -> Maybe Instruction
 getInstructionByCurrentPc vm =

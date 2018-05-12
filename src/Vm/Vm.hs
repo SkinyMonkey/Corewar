@@ -15,9 +15,6 @@ import qualified Data.ByteString.Lazy as BL
 import Utils
 import Op
 
--- FIXME : reuse ArgType?
-data Parameter = PRegister RegisterNbr | PDirect Word32 | PIndirect Word16 deriving (Show, Eq)
-
 data Program = Program {
   number :: Int,
   name :: String,
@@ -60,28 +57,12 @@ w8stoW32 :: [Word8] -> Word32
 w8stoW32 = foldl conversion 0
   where conversion a o = ( a `shiftL` 8) .|. fromIntegral o
 
-w8stoW16 :: [Word8] -> Word16
-w8stoW16 = foldl conversion 0
-  where conversion a o = ( a `shiftL` 8) .|. fromIntegral o
-
 w32tow8s :: Word32 -> [Word8]
 w32tow8s w = [
     fromIntegral ( w `shiftR` 24),
     fromIntegral ( w `shiftR` 16),
     fromIntegral ( w `shiftR` 8),
     fromIntegral w
-  ]
-
-w8stoW32le :: [Word8] -> Word32
-w8stoW32le = foldr conversion 0
-  where conversion o a = ( a `shiftL` 8) .|. fromIntegral o
-
-w32tow8sle :: Word32 -> [Word8]
-w32tow8sle w = [
-    fromIntegral w,
-    fromIntegral ( w `shiftR` 8),
-    fromIntegral ( w `shiftR` 16),
-    fromIntegral ( w `shiftR` 24)
   ]
 
 modMemSize = flip mod memSize
@@ -94,11 +75,15 @@ setMemory offset memory content =
       memoryAfterContent = bslice (fromIntegral offset + contentLength) (B.length memory) memory
   in B.concat [ memoryBeforeContent, content, memoryAfterContent ]
 
+setGraphicalMemory :: Offset -> Int -> B.ByteString -> B.ByteString -> B.ByteString
+setGraphicalMemory offset championNbr memory content = 
+  let graphicInstructions = B.pack $ replicate (B.length content) (fromIntegral championNbr)
+  in setMemory offset memory graphicInstructions
+
 setMemorys :: Offset -> Int -> B.ByteString -> Vm -> Vm
 setMemorys offset championNbr content vm =
   let memory' = setMemory offset (memory vm) content
-      graphicInstructions = B.pack $ replicate (B.length content) (fromIntegral championNbr)
-      graphicMemory' = setMemory offset (graphicMemory vm) graphicInstructions
+      graphicMemory' = setGraphicalMemory offset championNbr (graphicMemory vm) content
   in vm { memory = memory', graphicMemory = graphicMemory' }
 
 word32ToBytestring :: Word32 -> B.ByteString
@@ -125,9 +110,16 @@ setCurrentProgram program vm =
       programs' = programs vm & ix championNbr .~ program
   in vm { programs = programs' }
 
+getProgramAt :: Int -> Vm -> Program
+getProgramAt index vm = (programs vm) !! index
+
+setProgramAt :: Program -> Int -> Vm -> Vm
+setProgramAt program index vm =
+  let programs' = programs vm & ix index .~ program
+  in vm { programs = programs' }
+
 getCurrentProgram :: Vm -> Program
-getCurrentProgram vm =
-  programs vm !! currentProgramNbr vm
+getCurrentProgram vm = programs vm !! currentProgramNbr vm
 
 setCurrentProgramNbr :: Program -> Vm -> Vm
 setCurrentProgramNbr program vm =
@@ -137,8 +129,7 @@ setCurrentProgramRegister :: RegisterNbr -> RegisterValue -> Vm -> Vm
 setCurrentProgramRegister registerNbr value vm =
   let program = getCurrentProgram vm
       registerNbr' = fromIntegral registerNbr
-      value' = fromIntegral value
-      registers' = registers program & ix registerNbr' .~ value'
+      registers' = registers program & ix registerNbr' .~ fromIntegral value
       program' = program { registers = registers' }
   in setCurrentProgram program' vm
 
@@ -182,20 +173,11 @@ setMemoryByCurrentProgramPc f offset value size vm =
       offset' = fromIntegral $ pc + f (fromIntegral offset)
   in updateMemory offset' value size vm
 
-parameterValue :: Parameter -> Word32
-parameterValue parameter = case parameter of
-        PRegister value -> fromIntegral value
-        PIndirect value -> fromIntegral value
-        PDirect value -> fromIntegral value
-
--- rename this one to getParameterFromMemory
-getValueFromMemory :: (Int -> Int) -> Parameter -> Int -> Vm -> Word32
-getValueFromMemory f parameter size vm =
+getValueFromMemory :: (Int -> Int) -> Offset -> Int -> Vm -> Word32
+getValueFromMemory f offset size vm =
   let pc = fromIntegral $ getCurrentProgramPc vm
-      offset = f $ fromIntegral $ parameterValue parameter
-      offset' = modMemSize $ pc + offset
-      memory' = memory vm
-      value = bslice offset' (offset' + size) memory'
+      offset' = modMemSize $ pc + (f $ fromIntegral offset)
+      value = bslice offset' (offset' + size) (memory vm)
    in w8stoW32 $ B.unpack value
 
 incrementCurrentProgramPc :: Int -> Vm -> Vm
@@ -215,7 +197,8 @@ setCurrentProgramCycleLeft cycles vm =
       program' = program { cyclesLeft = cycles }
   in setCurrentProgram program' vm
 
-getParameterValue f param vm = case param of
-  PRegister registerNbr -> fromIntegral $ getCurrentProgramRegister registerNbr vm
-  PDirect value -> fromIntegral value
-  PIndirect value -> fromIntegral $ getValueFromMemory f param 4 vm
+getParameterValue :: (Int -> Int) -> Parameter -> Int -> Vm -> Word32
+getParameterValue f param size vm = case param of
+  Register registerNbr -> fromIntegral $ getCurrentProgramRegister registerNbr vm
+  Direct value -> fromIntegral value
+  Indirect value -> getValueFromMemory f (fromIntegral value) size vm

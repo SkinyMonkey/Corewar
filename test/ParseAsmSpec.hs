@@ -61,7 +61,7 @@ testParseAsm =
     describe "parseOp, parse an op and its arguments" $ do
       it "should parse an op and its args and add it to a championData" $ do
         let op = byMnemonic "live"
-            instructionsChampionData = addInstruction championData op [Direct "1"]
+            instructionsChampionData = addInstruction championData op [Direct 1]
             line = words "live %1"
         parseOp line championData `shouldBe` worked instructionsChampionData
 
@@ -84,14 +84,14 @@ testParseAsm =
  
       it "should parse the instructions and add them to the championData instructions" $ do
         let op = byMnemonic "live"
-            instructionsChampionData = addInstruction championData op [Direct "1"]
+            instructionsChampionData = addInstruction championData op [Direct 1]
             line = words "live %1"
         parseInstruction line championData `shouldBe` worked instructionsChampionData
 
       it "should parse the label and instructions and add them to the championData labels and instructions" $ do
         let op = byMnemonic "live"
             labelChampionData = addLabel championData "label"
-            instructionsChampionData = addInstruction labelChampionData op [Direct "1"]
+            instructionsChampionData = addInstruction labelChampionData op [Direct 1]
             line = words "label: live %1"
         parseInstruction line championData `shouldBe` worked instructionsChampionData
 
@@ -109,18 +109,18 @@ testParseAsm =
       it "should parse and add an instruction to championData" $ do
         let op = byMnemonic "live"
             line = "live %1"
-            instructionsChampionData = incLineNbr $ setCurrentLine (addInstruction championData op [Direct "1"]) line
+            instructionsChampionData = incLineNbr $ setCurrentLine (addInstruction championData op [Direct 1]) line
         parseLine ("", championData) line `shouldBe` ("", instructionsChampionData)
 
       it "should parse and add an instruction to championData but ignore the comments" $ do
         let op = byMnemonic "live"
-            hashLineChampionData = addInstruction championData op [Direct "1"]
+            hashLineChampionData = addInstruction championData op [Direct 1]
         testParseLine "live %1 # comment" hashLineChampionData
 
-        let semiColChampionData = addInstruction championData op [Direct "1"]
+        let semiColChampionData = addInstruction championData op [Direct 1]
         testParseLine "live %1 ; comment" semiColChampionData
 
-        let championData' = addInstruction championData op [Direct "1"]
+        let championData' = addInstruction championData op [Direct 1]
         testParseLine "live %1 # %2" championData'
 
     -- FIXME : finish, see TODO

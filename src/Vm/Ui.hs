@@ -129,6 +129,15 @@ carryText = "carry : "
 pcText = "pc : "
 registerText = "registers : "
 
+-- FIXME : clearPad instead
+clearStat :: Int -> Int -> Program -> Update ()
+clearStat rows cols program = do
+  let championNbr = number program
+      row = fromIntegral rows - 4 + fromIntegral championNbr
+
+  moveCursor row leftMargin
+  drawString $ replicate cols ' '
+
 drawProgramStat :: Int -> Program -> Update ()
 drawProgramStat rows program = do
   let championNbr = number program
@@ -173,7 +182,8 @@ drawProgramStat rows program = do
 renderStats vm = do
   w <- defaultWindow
   updateWindow w $ do
-    (rows, _) <- windowSize
+    (rows, cols) <- windowSize
+    mapM_ (clearStat (fromIntegral rows) (fromIntegral cols)) (programs vm)
     mapM_ (drawProgramStat $ fromIntegral rows) (programs vm)
   render
 

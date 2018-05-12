@@ -1,6 +1,8 @@
 module Vm.Instructions where
 
 import Foreign.Storable
+import Data.Word
+import Data.Int
 import Data.Maybe
 import Data.Bits
 import Data.ByteString.Internal
@@ -12,21 +14,25 @@ import Vm.Vm
 import Debug.Trace
 
 modIdxMod = flip mod idxMod
+modNegIdxMod = flip mod (idxMod * (-1))
+
+getParameterValueId = getParameterValue id
 
 -- Followed by 4 bytes representing the player name.
 -- This instruction indicates that the player is alive.
 -- (No parameter encoding byte)
 live :: [Parameter] -> Vm -> Maybe Vm
-live [PDirect playerNbr] vm =
-  if playerNbr >= 0 && fromIntegral playerNbr < length (programs vm)
-  then let program = getCurrentProgram vm
-       in Just $ setCurrentProgram (program { alive = True}) vm
+live [Direct championNbr] vm =
+  if championNbr > 0 && fromIntegral championNbr < length (programs vm)
+  then let championIndex = fromIntegral championNbr - 1
+           program = getProgramAt championIndex vm
+       in Just $ setProgramAt (program { alive = True }) championIndex vm
   else Nothing 
 live _ _ = Nothing
 
 ld_ :: (Int -> Int) -> [Parameter] -> Vm -> Maybe Vm
-ld_ f [firstParam, PRegister registerNbr] vm =
-  let value = getParameterValue f firstParam vm
+ld_ f [firstParam, Register registerNbr] vm =
+  let value = getParameterValue f firstParam regSize vm
       vm' = setCurrentProgramCarry (value /= 0) vm
   in Just $ setCurrentProgramRegister registerNbr (fromIntegral value) vm'
 ld_ _ _ _ = Nothing
@@ -47,15 +53,15 @@ ld = ld_ modIdxMod
 -- st r4,34 stores the value of r4 at the address (PC + (34 % IDX_MOD))
 -- st r3,r8 copies r3 in r8
 st :: [Parameter] -> Vm -> Maybe Vm
-st [PRegister registerNbr, secondParam] vm =
+st [Register registerNbr, secondParam] vm =
   let value = getCurrentProgramRegister registerNbr vm
   in case secondParam of
-   PRegister dstPRegister -> Just $ setCurrentProgramRegister dstPRegister value vm
-   PIndirect offset -> Just $ setMemoryByCurrentProgramPc modIdxMod (fromIntegral offset) (fromIntegral value) regSize vm
+   Register dstRegister -> Just $ setCurrentProgramRegister dstRegister value vm
+   Indirect offset -> Just $ setMemoryByCurrentProgramPc modIdxMod (fromIntegral offset) (fromIntegral value) regSize vm
 st _ _ = Nothing
 
 registerOperation :: (RegisterValue -> RegisterValue -> RegisterValue) -> [Parameter] -> Vm -> Maybe Vm
-registerOperation f [PRegister r1, PRegister r2, PRegister r3] vm = 
+registerOperation f [Register r1, Register r2, Register r3] vm = 
   let r1Value = getCurrentProgramRegister r1 vm
       r2Value = getCurrentProgramRegister r2 vm
       result = f r1Value r2Value
@@ -63,10 +69,10 @@ registerOperation f [PRegister r1, PRegister r2, PRegister r3] vm =
 registerOperation _ _ _ = Nothing
 
 registerCarryOperation :: (Int -> Int -> Int) -> [Parameter] -> Vm -> Maybe Vm
-registerCarryOperation f [firstParam, secondParam, PRegister registerNbr] vm =
-  let firstValue = getParameterValue id firstParam vm
-      secondValue = getParameterValue id secondParam vm
-      result = f firstValue secondValue
+registerCarryOperation f [firstParam, secondParam, Register registerNbr] vm =
+  let firstValue = getParameterValueId firstParam regSize vm -- size is for the indirect only
+      secondValue = getParameterValueId secondParam regSize vm -- size is for the indirect only
+      result = f (fromIntegral firstValue) (fromIntegral secondValue)
       vm' = setCurrentProgramRegister registerNbr (fromIntegral result) vm
   in Just $ setCurrentProgramCarry (result /= 0) vm'
 registerCarryOperation _ params _ = Nothing
@@ -93,6 +99,18 @@ or = registerCarryOperation (.|.)
 -- Same as and but with an or (^ in C)
 xor = registerCarryOperation Data.Bits.xor
  
+maxUShort = maxBound :: Word16 
+maxShort = maxBound :: Int16
+
+-- FIXME : put mod back
+signedJmp :: Word16 -> Int16 -> Word16
+signedJmp origin offset =
+  if offset < maxShort
+--  then origin + (fromIntegral (modIdxMod (fromIntegral offset)))                                   -- > 0
+--  else origin - (fromIntegral (modNegIdxMod (fromIntegral (maxUShort - fromIntegral offset) + 1))) -- < 0
+  then origin + (fromIntegral (fromIntegral offset))                                   -- > 0
+  else origin - (fromIntegral (fromIntegral (maxUShort - fromIntegral offset) + 1)) -- < 0
+
 -- This instruction is not followed by any parameter encoding byte.
 -- It always takes an index (IND_SIZE) 
 -- if the carry is set to 1 makes a jump at this index
@@ -100,19 +118,20 @@ xor = registerCarryOperation Data.Bits.xor
 --
 -- zjmp %23 does : If carry == 1, store (PC + (23 % IDX_MOD)) in the PC.
 zjmp :: [Parameter] -> Vm -> Maybe Vm
-zjmp [PDirect offset] vm =
+zjmp [Direct offset] vm =
   let currentProgram = getCurrentProgram vm
---      offset' = modIdxMod $ fromIntegral $ if offset > 32767 then (65535 - offset) * (-1) else offset
+      newPc = fromIntegral $ signedJmp (fromIntegral $ pc currentProgram) (fromIntegral offset)
   in if carry currentProgram
-     then Just $ setCurrentProgramPc (pc currentProgram + fromIntegral offset) vm
+     then Just $ setCurrentProgramPc (fromIntegral newPc) vm
      else Just vm
 zjmp _ _ = Nothing
  
 ldi_ :: (Int -> Int) -> [Parameter] -> Vm -> Maybe Vm
-ldi_ f [firstParam, secondParam, PRegister registerNbr] vm =
-  let firstValue = getParameterValue f firstParam vm
-      s = PIndirect $ fromIntegral $ firstValue + parameterValue secondParam
-      finalValue = getParameterValue f s vm
+ldi_ f [firstParam, secondParam, Register registerNbr] vm =
+  let firstValue = getParameterValue f firstParam regSize vm -- size is for the indirect only
+      secondValue = getParameterValue f secondParam regSize vm
+      s = Indirect $ fromIntegral $ firstValue + secondValue
+      finalValue = getParameterValue f s regSize vm
       vm' = setCurrentProgramCarry (finalValue /= 0) vm
   in Just $ setCurrentProgramRegister registerNbr (fromIntegral finalValue) vm
 ldi_ _ _ _ = Nothing
@@ -127,7 +146,7 @@ ldi_ _ _ _ = Nothing
 ldi :: [Parameter] -> Vm -> Maybe Vm
 ldi = ldi_ modIdxMod
 
---         is this all good?
+-- FIXME : is this all good?
 --         how does it compare to st?
 -- sti r2,%4,%5 sti
 -- copies REG_SIZE bytes of r2 at address (4 + 5)
@@ -136,10 +155,10 @@ ldi = ldi_ modIdxMod
 
 -- FIXME : do we apply idxMod?
 sti :: [Parameter] -> Vm -> Maybe Vm
-sti [PRegister registerNbr, secondParam, thirdParam] vm =
+sti [Register registerNbr, secondParam, thirdParam] vm =
   let toStore = getCurrentProgramRegister registerNbr vm
-      secondParamValue = getParameterValue id secondParam vm
-      thirdParamValue = getParameterValue id thirdParam vm
+      secondParamValue = getParameterValueId secondParam regSize vm
+      thirdParamValue = getParameterValueId thirdParam regSize vm
 
       offset = fromIntegral $ secondParamValue + thirdParamValue
   in Just $ setMemoryByCurrentProgramPc id offset (fromIntegral toStore) regSize vm
@@ -148,7 +167,7 @@ sti _ _ = Nothing
 fork_ :: (Int -> Int) -> [Parameter] -> Vm -> Maybe Vm
 fork_ f [param] vm =
   let program = getCurrentProgram vm
-      offset = parameterValue param
+      offset = getParameterValue f param regSize vm -- FIXME : what size, what f
       pc' = f $ fromIntegral $ offset + pc program
       program' = program { pc = fromIntegral pc' :: Offset }
   in Just $ vm { programs = programs vm ++ [program'] }
@@ -183,7 +202,7 @@ lfork = fork_ id
 -- aff r3
 -- Displays ’*’ on the standard output
 aff :: [Parameter] -> Vm -> Maybe Vm
-aff [PRegister registerNbr] vm =
+aff [Register registerNbr] vm =
   let value = getCurrentProgramRegister registerNbr vm
       aff' = affBuffer vm ++ [w2c value]
   in Just $ vm { affBuffer = aff' }

@@ -29,9 +29,9 @@ _nameCmdString = ".name"
 _commentCmdString = ".comment"
 
 -- Size for memory access
+regSize = 1 :: Int
 indSize = 2 :: Int
-regSize = 4 :: Int
-dirSize = regSize
+dirSize = 4 :: Int
 
 type Offset = Word32
 type RegisterNbr = Word8
@@ -39,30 +39,18 @@ type RegisterValue = Word8
 
 -- Op arguments types
 
--- FIXME : find a way to reuse this type in both Asm and Vm
---         without specifying a type at construction
---         not -> ArgType Word8 Word16 Word32
---         not -> PRegister = Register Word8
---         not -> ArgType Word 32
---             -> would force use to do a lot of fromIntegral for nothing
---         OR move this to the asm part
---         rename is to parameter
---         -> two different context, two different meanings
-data ArgType a = Register a | Direct a | Indirect a | Label a deriving (Show, Eq)
+data Parameter = Register Word8 | Indirect Word16 | Direct Word32 | Label String deriving (Show, Eq)
 
-
--- FIXME : remove, use a -> ArgType a instead
-register = Register ()
-direct = Direct ()
-indirect = Indirect ()
+register = Register 0
+direct = Direct 0
+indirect = Indirect 0
 
 -- Param octet codage 
 
--- FIXME : remove ArgType (), use a -> ArgType a instead
 data Op = Op {
   mnemonic :: String,
   nbrArgs :: Int,
-  argsType :: [[ArgType ()]],
+  argsType :: [[Parameter]],
   code :: Word8,
   nbrCycles :: Int,
   comment :: String
@@ -74,8 +62,7 @@ getMnemonic = mnemonic
 getNbrArgs :: Op -> Int
 getNbrArgs = nbrArgs
 
--- FIXME : remove ArgType (), use a -> ArgType a instead
-getArgsTypes :: Op -> [[ArgType ()]]
+getArgsTypes :: Op -> [[Parameter]]
 getArgsTypes = argsType
 
 getCode :: Op -> Word8

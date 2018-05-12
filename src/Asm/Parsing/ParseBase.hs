@@ -1,5 +1,6 @@
 module Asm.Parsing.ParseBase where
 
+import Data.Word
 import Data.Maybe
 import Data.Char
 import Utils
@@ -23,16 +24,16 @@ numChar c = (ord c >= ord '0') && (ord c <= ord '9')
 identifierChar :: Char -> Bool
 identifierChar c = alphaChar c || numChar c || c == '_'
 
-parseNum :: String -> Maybe String
+parseNum :: String -> Maybe Word32
 parseNum candidate
   | candidate == "" = Nothing
   | head candidate == '-' =
     if not (any (not . numChar) (tail candidate))
-    then Just candidate
+    then Just $ (read candidate :: Word32)
     else Nothing
   | otherwise =
     if not (any (not . numChar) candidate)
-    then Just candidate
+    then Just $ (read candidate :: Word32)
     else Nothing
 
 parseId :: String -> Maybe String
