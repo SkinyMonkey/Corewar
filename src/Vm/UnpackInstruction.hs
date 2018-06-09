@@ -78,7 +78,7 @@ validParameter instruction championsNbr acc (el, legalParameters) = case el of
 
 validParameters :: InstructionCode -> Int -> [Parameter] -> Bool
 validParameters instruction championsNbr params =
-  let legalParameters = argsType (opsbyCode !! fromIntegral instruction)
+  let legalParameters = argsType (opsbyCode !! (fromIntegral instruction - 1))
   in foldl (validParameter instruction championsNbr) True $ zip params legalParameters
 
 -- validOpCode : Apply bitmasks from right to left
@@ -113,4 +113,4 @@ getInstruction championsNbr = do
             return $ Just $ Instruction index params size cycles'
 
        else return Nothing
-  else return Nothing -- error $ "BAD INSTRUCTION : " ++ show instruction -- Nothing
+  else return Nothing -- 

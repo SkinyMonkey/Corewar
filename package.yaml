@@ -44,18 +44,18 @@ executables:
     dependencies:
     - corewar
 
-      #  vm:
-      #    main:                Main.hs
-      #    source-dirs:         vm
-      #    ghc-options:
-      #    - -threaded
-      #    - -rtsopts
-      #    - -with-rtsopts=-N
-      #    - -Wall
-      #    - -Wextra
-      #    - -O3
-      #    dependencies:
-      #    - corewar
+  vm:
+    main:                Main.hs
+    source-dirs:         vm
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    - -Wall
+    - -Wextra
+    - -O3
+    dependencies:
+    - corewar
 
 tests:
   # FIXME : separate asm and vm tests

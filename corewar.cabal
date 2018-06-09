@@ -1,8 +1,8 @@
--- This file has been generated from package.yaml by hpack version 0.20.0.
+-- This file has been generated from package.yaml by hpack version 0.28.2.
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: fedc5eae4481a31f45d815f68d6efd1193e1c57541c6f1bf8b0685004f0fdfc2
+-- hash: 9ed9b56e23d8dec9240e3a8bd34ccfdd9c4cfa83cfdd66b32a3e14671fc3ee27
 
 name:           corewar
 version:        0.1.0.0
@@ -17,7 +17,6 @@ license:        BSD3
 license-file:   LICENSE
 build-type:     Simple
 cabal-version:  >= 1.10
-
 extra-source-files:
     ChangeLog.md
     README.md
@@ -58,6 +57,23 @@ executable asm
   main-is: Main.hs
   hs-source-dirs:
       asm
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N -Wall -Wextra -O3
+  build-depends:
+      base >=4.7 && <5
+    , binary
+    , bytestring
+    , containers
+    , corewar
+    , lens
+    , ncurses >=0.2
+  other-modules:
+      Paths_corewar
+  default-language: Haskell2010
+
+executable vm
+  main-is: Main.hs
+  hs-source-dirs:
+      vm
   ghc-options: -threaded -rtsopts -with-rtsopts=-N -Wall -Wextra -O3
   build-depends:
       base >=4.7 && <5

@@ -98,18 +98,20 @@ byMnemonic "xor" =  Op "xor" 3 [[register, indirect, direct],
 byMnemonic "zjmp" =  Op "zjmp" 1 [[direct]]  9 20 "jump if zero"
 
 byMnemonic "ldi" =  Op "ldi" 3 [[register, direct, indirect],
-                                [direct, register],
+                                [register, direct],
                                 [register]] 10 25 "load index"
 
 byMnemonic "sti" =  Op "sti" 3 [[register],
                                 [register, direct, indirect],
-                                [direct, register]] 11 25 "store index"
+                                [register, direct]] 11 25 "store index"
 
 byMnemonic "fork" =  Op "fork" 1 [[direct]]  12 800 "fork"
-byMnemonic "lld" =  Op "lld" 2 [[direct], [indirect], [register]] 13 10 "long load"
+byMnemonic "lld" =  Op "lld" 2 [[direct, indirect], [register]] 13 10 "long load"
+
 byMnemonic "lldi" =  Op "lldi" 3 [[register, direct, indirect],
-                                  [direct, register],
+                                  [register, direct],
                                   [register]] 14 50 "long load idx"
+
 byMnemonic "lfork" =  Op "lfork" 1 [[direct]]  15 1000 "long fork"
 byMnemonic "aff" =  Op "aff" 1 [[register]]  16 2 "aff"
 

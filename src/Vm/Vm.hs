@@ -167,11 +167,14 @@ updateMemory offset value size vm =
       championNbr = getCurrentChampionNumber vm
   in setMemorys offset championNbr toInsert vm
 
+-- FIXME : the sti of the second champion seems to not work
+--         like the modMemSize wasnt applied
 setMemoryByCurrentProgramPc :: (Int -> Int) -> Offset -> Word32 -> Int -> Vm -> Vm
 setMemoryByCurrentProgramPc f offset value size vm =
   let pc = fromIntegral $ getCurrentProgramPc vm
-      offset' = fromIntegral $ pc + f (fromIntegral offset)
+      offset' = fromIntegral $ modMemSize $ pc + f (fromIntegral offset)
   in updateMemory offset' value size vm
+  -- in error $ "Offset : " ++ show offset ++ " Offset' : " ++ show offset'
 
 getValueFromMemory :: (Int -> Int) -> Offset -> Int -> Vm -> Word32
 getValueFromMemory f offset size vm =

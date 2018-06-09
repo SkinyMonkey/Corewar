@@ -35,7 +35,7 @@ executeInstruction vm (Instruction index p size cycles) =
       vm' = handler p vm
       -- FIXME : index `elem` leavePcIntact
       increment = if index == 0x08 then id else incrementCurrentProgramPc size
-  in (increment . setCurrentProgramCycleLeft cycles) <$> vm'
+  in (increment . setCurrentProgramCycleLeft cycles) <$> Just vm'
 
 getInstructionByCurrentPc :: Vm -> Maybe Instruction
 getInstructionByCurrentPc vm =
