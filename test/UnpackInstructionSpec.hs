@@ -1,36 +1,106 @@
+{-# LANGUAGE BinaryLiterals #-}
+
 module UnpackInstructionSpec where
+
+import qualified Data.ByteString as B
+import qualified Data.ByteString.Lazy as BL
+import Data.Binary.Get
+import Data.Maybe
 
 import Test.Hspec
 
 import Op
+import Vm.Vm
 import Vm.UnpackInstruction
+import Vm.Instructions
 
 testUnpackInstructions =
   describe "UnpackInstruction" $ do
-  -- FIXME : clean up test
-     it "test getInstructionSize" $ do
-      let hasIndex = True
-          noIndex  = False
-          hasOpCode = True
-          noOpCode = False
+    it "getInstruction with a valid instruction using a direct without index"$ do
+      let paramBytes = [0, 0, 0, 0b00000001] -- 4 * 8 bits
+          memory = BL.pack $ [1] ++ paramBytes ++ replicate 32 0
+          getInstruction' = getInstruction 4
+          instruction = runGet getInstruction' memory 
+          index = 0
+          params = [Direct 1]
+          size = 5
+          cycles = 10
+          expectedResult = Just $ Instruction index params size cycles
 
-      getInstructionSize [Register 0, Indirect 0, Direct 0] hasIndex hasOpCode `shouldBe` 7
-      getInstructionSize [Register 0, Direct 0, Register 0] noIndex hasOpCode `shouldBe` 8
-      getInstructionSize [Direct 0] False noOpCode `shouldBe` 5
+      instruction `shouldBe` expectedResult
 
--- FIXME : move to UnpackInstructions
---    it "validOpCode" $ do
---      let opCode1 = 255 -- 0b11111111
---      validOpCode opCode1 `shouldBe` True
---
---      let opCode2 = 0 -- 0b00000000
---      validOpCode opCode2 `shouldBe` False
---
---      let opCode3 = 128 -- 0b10000000
---      validOpCode opCode3 `shouldBe` True
---
---      let opCode4 = 204 -- 0b11001100
---      validOpCode opCode4 `shouldBe` False
---
---      let opCode5 = 236 -- 0b11101100
---      validOpCode opCode5 `shouldBe` True
+    it "getInstruction with a valid instruction using a register"$ do
+      let opCode = [0b01000000] -- 8 bits
+          paramBytes = [1] -- 8 bits
+          memory = BL.pack $ [2] ++ opCode ++ paramBytes ++ replicate 32 0
+          getInstruction' = getInstruction 4
+          instruction = runGet getInstruction' memory 
+          index = 1
+          params = [Register 1]
+          size = 3
+          cycles = 5
+          expectedResult = Just $ Instruction index params size cycles
+
+      instruction `shouldBe` expectedResult
+
+    it "getInstruction with a valid instruction using a direct without index and an indirect"$ do
+      let opCode = [0b10110000] -- 8 bits
+          paramBytes = [0, 0, 0, 1]  ++ [ 0, 1]
+          memory = BL.pack $ [2] ++ opCode ++ paramBytes ++ replicate 32 0
+          getInstruction' = getInstruction 4
+          instruction = runGet getInstruction' memory 
+          index = 1
+          params = [Direct 1, Indirect 1]
+          size = 8
+          cycles = 5
+          expectedResult = Just $ Instruction index params size cycles
+
+      instruction `shouldBe` expectedResult
+
+    it "getInstruction with a valid instruction using a direct with an index"$ do
+      let paramBytes = [ 0, 1 ]
+          memory = BL.pack $ [9] ++ paramBytes ++ replicate 32 0
+          getInstruction' = getInstruction 4
+          instruction = runGet getInstruction' memory 
+          index = 8
+          params = [Direct 1]
+          size = 3
+          cycles = 20
+          expectedResult = Just $ Instruction index params size cycles
+
+      instruction `shouldBe` expectedResult
+
+    it "getInstruction with a valid instruction using a direct with an index in second position"$ do
+      let opCode = [0b01100000]
+          paramBytes = [1] ++ [ 0, 1 ]
+          memory = BL.pack $ [10] ++ opCode ++ paramBytes ++ replicate 32 0
+          getInstruction' = getInstruction 4
+          instruction = runGet getInstruction' memory 
+          index = 9
+          params = [Register 1, Direct 1]
+          size = 5
+          cycles = 25
+          expectedResult = Just $ Instruction index params size cycles
+
+      instruction `shouldBe` expectedResult
+
+    it "getInstruction with an invalid instruction"$ do
+      let memory = BL.pack $ replicate memSize 0
+          getInstruction' = getInstruction 4
+          instruction = runGet getInstruction' memory
+
+      instruction `shouldBe` Nothing
+
+    it "getInstruction with an invalid op code"$ do
+      let memory = BL.pack $ [2, 1]
+          getInstruction' = getInstruction 4
+          instruction = runGet getInstruction' memory
+
+      instruction `shouldBe` Nothing
+
+    it "getInstruction with an invalid params"$ do
+      let memory = BL.pack $ [1, 0, 0, 0, 42]
+          getInstruction' = getInstruction 4
+          instruction = runGet getInstruction' memory
+
+      instruction `shouldBe` Nothing

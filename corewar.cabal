@@ -1,8 +1,10 @@
--- This file has been generated from package.yaml by hpack version 0.28.2.
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.34.4.
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 9ed9b56e23d8dec9240e3a8bd34ccfdd9c4cfa83cfdd66b32a3e14671fc3ee27
+-- hash: 4fe38e6e4f37d8b1b6e1c20bded78ef13c22975490ae07c2454a3310fd440f17
 
 name:           corewar
 version:        0.1.0.0
@@ -16,10 +18,9 @@ copyright:      2017 Adrien Candiotti
 license:        BSD3
 license-file:   LICENSE
 build-type:     Simple
-cabal-version:  >= 1.10
 extra-source-files:
-    ChangeLog.md
     README.md
+    ChangeLog.md
 
 source-repository head
   type: git
@@ -45,6 +46,7 @@ library
       Asm.Parsing.ParseBase
       Op
       Utils
+      Vm.CheckInstruction
       Vm.Instructions
       Vm.Ui
       Vm.UnpackInstruction
@@ -94,7 +96,8 @@ test-suite test
       test
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
-      QuickCheck
+      HUnit
+    , QuickCheck
     , base >=4.7 && <5
     , binary
     , bytestring
@@ -105,6 +108,7 @@ test-suite test
     , ncurses >=0.2
   other-modules:
       CheckArgsSpec
+      CheckInstructionSpec
       CodeGenerationSpec
       ComputeOffsetsSpec
       InstructionsSpec

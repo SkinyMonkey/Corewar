@@ -1,7 +1,8 @@
 module Op where
 
--- import Data.Bits
 import Data.Word
+import Data.Maybe
+import Data.List
 
 -- FIXME : USE
 -- Internals definitions
@@ -119,11 +120,16 @@ byMnemonic mnemonic = error $ "Unknown mnemonic found : " ++ mnemonic
 
 opsNames = ["live", "ld", "st", "add", "sub", "and", "or", "xor", "zjmp", "ldi", "sti", "fork", "lld", "lldi", "lfork", "aff"]
 
+instructionByMnemonic :: String -> InstructionCode
+instructionByMnemonic instruction = (fromIntegral $ fromJust $ elemIndex instruction opsNames) + 1
+
 opsbyCode :: [Op]
 opsbyCode = [byMnemonic name | name <- opsNames]
 
 byCode :: Int -> Op
 byCode index = opsbyCode !! index
+
+mnemonicByInstruction instruction = (mnemonic $ opsbyCode !! (fromIntegral instruction - 1))
 
 noOpCodeInstructions =
   [code (byMnemonic op) | op <- ["live", "zjmp", "fork", "lfork"]]

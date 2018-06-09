@@ -4,9 +4,8 @@ import Asm.Generation.ComputeOffsets
 import Asm.Generation.CodeGeneration
 
 import Asm.ChampionData
-import Asm.Header
 
-import Debug.Trace
+--import Debug.Trace
 
 finished :: String -> String -> Maybe a -> (String, a)
 finished filename step Nothing = error $ step ++ " failed for " ++ filename

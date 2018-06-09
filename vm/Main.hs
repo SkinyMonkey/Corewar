@@ -39,10 +39,15 @@ executeInstruction vm (Instruction index p size cycles) =
 
 getInstructionByCurrentPc :: Vm -> Maybe Instruction
 getInstructionByCurrentPc vm =
-  let offset = getCurrentProgramPc vm
+  let offset = fromIntegral $ getCurrentProgramPc vm
       -- FIXME : circle buffer behavior
-      memory' = bslice (fromIntegral offset) (fromIntegral offset + 32) (memory vm)
-  in runGet (getInstruction (length (programs vm))) $ BL.fromStrict memory'
+      -- FIXME : why 32? shouldn't it be an offset based on the instruction?
+      offsetEnd = offset + 32 -- FIXME : why 32? seems arbitrary?
+      memorySlice = BL.fromStrict $ bslice offset offsetEnd (memory vm)
+      championsNbr = length $ programs vm
+      getInstruction' = getInstruction championsNbr
+
+  in runGet getInstruction' memorySlice
 
 execute :: Vm -> Program -> Vm
 execute vm program =
