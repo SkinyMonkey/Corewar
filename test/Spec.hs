@@ -10,11 +10,11 @@ import CheckInstructionSpec
 
 main :: IO ()
 main = hspec $ do
---  testCheckArgs
---  testParseAsm
---  testCodeGeneration
---  testComputeOffsets
---  testVm
---  testInstructions
---  testCheckInstructions
+  testCheckArgs
+  testParseAsm
+  testCodeGeneration
+  testComputeOffsets
+  testVm
+  testInstructions
+  testCheckInstructions
   testUnpackInstructions
