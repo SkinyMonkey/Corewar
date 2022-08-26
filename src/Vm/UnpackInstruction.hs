@@ -32,7 +32,7 @@ getParameter hasIndex opCode
   | currentParameter == registerMask = Register <$> getWord8
   | currentParameter == indirectMask = Indirect <$> getWord16be
   | currentParameter == directMask   = Direct   <$> (if hasIndex then fromIntegral <$> getWord16be else getWord32be)
---   | otherwise = error $ "Unknown parameter type " ++ show currentParameter -- NOTE: should never happen
+  | otherwise = error $ "Unknown parameter type " ++ show currentParameter -- NOTE: should never happen
   where currentParameter = opCode .&. currentMask
 
 -- FIXME : replace by mapM_
@@ -58,7 +58,7 @@ getInstruction championsNbr = do
   then do 
        let hasIndex =  instruction `elem` haveIndexInstructions
            hasOpCode = instruction `notElem` noOpCodeInstructions
-       (opCode, params) <- getParameters hasOpCode hasIndex
+       (opCode, params) <- getParameters hasOpCode hasIndex -- (opCode, params, error)
 
        let validOpCode = if hasOpCode then opCodeIsValid opCode else True
            validParameters = parametersAreValid instruction championsNbr params
