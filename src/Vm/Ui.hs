@@ -128,6 +128,7 @@ aliveText = "alive : "
 carryText = "carry : "
 pcText = "pc : "
 registerText = "registers : "
+instructionText = "last instruction : "
 
 -- FIXME : clearPad instead
 clearStat :: Int -> Int -> Program -> Update ()
@@ -178,6 +179,12 @@ drawProgramStat rows program = do
       registerString = registerText ++ show (registers program)
   moveCursor row registerMargin
   drawString registerString
+
+  -- last instruction
+  let instructionMargin = pcMargin + fromIntegral (length pcString) + 2
+      instructionString = instructionText ++ show (lastInstruction program)
+  moveCursor row instructionMargin
+  drawString instructionString
 
 renderStats vm = do
   w <- defaultWindow

@@ -10,12 +10,14 @@ import qualified Data.ByteString as B
 import Op
 import Vm.Vm
 
-import Debug.Trace
+import Utils
 
 modIdxMod = flip mod idxMod
 modNegIdxMod = flip mod (idxMod * (-1))
 
 getParameterValueId = getParameterValue id
+
+type InstructionFn = [Parameter] -> Vm -> Vm
 
 -- alive
 -- Followed by 4 bytes representing the player name.
@@ -151,10 +153,10 @@ ldi = ldi_ modIdxMod
 -- FIXME : do we apply idxMod?
 
 -- store index
--- sti r2,%4,%5 sti
--- copies REG_SIZE bytes of r2 at address (4 + 5)
+-- sti r2,%4,%5
+-- sti copies REG_SIZE bytes of r2 at address (4 + 5)
 -- Parameters 2 and 3 are indexes.
--- If they are, in fact, registers, we’ll use their contents as indexes.
+-- If they are, in fact, registers, we’ll use their contents as indexes. -- FIXME
 sti :: [Parameter] -> Vm -> Vm
 sti [Register registerNbr, secondParam, thirdParam] vm =
   let toStore = getCurrentProgramRegister registerNbr vm
@@ -212,7 +214,17 @@ aff [Register registerNbr] vm =
       aff' = affBuffer vm ++ [w2c value]
   in vm { affBuffer = aff' }
 
-instructionTable = [
+setInstrutionNameWrapper :: Int -> InstructionFn -> [Parameter] -> Vm -> Vm
+setInstrutionNameWrapper index f parameters vm =
+  let instructionName = trace' $ opsNames !! index
+      vm' = setCurrentProgramInstruction instructionName vm
+  in f parameters vm'
+
+wrapInstructionWithSetName :: [InstructionFn] -> [InstructionFn]
+wrapInstructionWithSetName table = 
+  mapWithIndex setInstrutionNameWrapper table
+
+instructionTable = wrapInstructionWithSetName([
   live,
   ld,
   st,
@@ -228,4 +240,4 @@ instructionTable = [
   lld,
   lldi,
   lfork,
-  aff]
+  aff])

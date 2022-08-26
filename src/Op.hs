@@ -7,9 +7,10 @@ import Data.List
 -- FIXME : USE
 -- Internals definitions
 memSize = 2301 :: Int -- 8 * 1024 + 717 :: Int
-idxMod = 512 :: Int
+idxMod = 512 :: Int -- FIXME : what is it?
 maxArgsNumber = 4 :: Int
 regNumber = 16 :: Int
+
 -- FIXME : move header length definition into op and use them
 magicSize = 4
 nameSize = 128

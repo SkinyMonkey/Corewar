@@ -23,3 +23,6 @@ wordsWhen p s =  case dropWhile p s of
                             where (w, s'') = break p s'
 
 lpad m xs = let ys = take m xs in replicate (m - length ys) '0' ++ ys
+
+mapWithIndex :: (Int -> a -> b) -> [a] -> [b]
+mapWithIndex f l = zipWith f [0..] l

@@ -3,21 +3,18 @@ import Control.Monad.IO.Class
 import Control.Concurrent (threadDelay)
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Lazy as BL
-import Data.Word
 import Data.Binary.Get
 import Data.Maybe
 
-import Debug.Trace
-
 import Utils
-import Op
 import Vm.Vm
 import Vm.UnpackInstruction
 import Vm.Instructions
 import Vm.Ui
 
 -- FIXME : import from VM?
-refreshDelay = 100000
+--refreshDelay = 100000
+refreshDelay = 100
 
 loadProgram :: Int -> Vm -> (Int, B.ByteString) -> Vm
 loadProgram championsNbr vm (championNumber, fileContent) =
@@ -26,7 +23,7 @@ loadProgram championsNbr vm (championNumber, fileContent) =
 loadPrograms :: Vm -> [B.ByteString] -> Vm
 loadPrograms vm fileContents =
   let championsNbr = length fileContents
-      championNumbers = [0..championsNbr - 1]
+      championNumbers = [1..championsNbr]
   in foldl (loadProgram championsNbr) vm $ zip championNumbers fileContents
 
 executeInstruction :: Vm -> Instruction -> Maybe Vm
@@ -61,13 +58,15 @@ execute vm program =
 play :: Vm -> Vm
 play vm = foldl execute vm (programs vm)
 
+--gameLoop :: Vm -> Int -> Vm
 gameLoop vm index = do
-  renderGame vm
-  renderStats vm
+--  renderGame vm
+--  renderStats vm
 
   let vm' = play vm
+  putStrLn $ show $ programs vm
 --  if nbrAlive vm > 0 || MEM_CYCLE == 0?
-  if index < 10000
+  if index < 5 -- 10000
   then do liftIO $ threadDelay refreshDelay
           gameLoop vm' (index + 1) -- vm
   else return vm'
@@ -82,8 +81,8 @@ main = do
   then do
     fileContents <- mapM B.readFile args
     let vm = loadPrograms newVm fileContents
---    gameLoop vm 0 -- DEBUG (without ncurses)
-    vm' <- renderVm vm gameLoop
-    print (programs vm')
+    gameLoop vm 0 -- DEBUG (without ncurses)
+--    vm' <- renderVm vm gameLoop
+--    print (programs vm')
     putStrLn "End VM"
   else putStrLn "usage: ./vm champion.cor [champion.cor]+"

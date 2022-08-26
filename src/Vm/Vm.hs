@@ -18,22 +18,24 @@ import Op
 data Program = Program {
   number :: Int,
   name :: String,
-  registers :: [Word32],
+  registers :: [Word8],
   pc :: Offset, -- eip
   carry :: Bool,
   alive :: Bool,
-  cyclesLeft :: Int -- before next instruction
+  cyclesLeft :: Int, -- before next instruction
+  lastInstruction :: String
 } deriving (Show, Eq)
 
 newProgram :: Int -> String -> Offset -> Program
 newProgram number name pcOffset = Program {
   number = number,
   name = name,
-  registers = replicate regNumber 0,
+  registers = [fromIntegral number] ++ replicate (regNumber - 1) 0,
   pc = pcOffset,
   carry = False,
   alive = True,
-  cyclesLeft = 0
+  cyclesLeft = 0,
+  lastInstruction = ""
 }
 
 data Vm = Vm {
@@ -97,16 +99,18 @@ insertProgram championsNbr championNbr programContent vm =
   let name = filter (/='\NUL') $ B8.unpack $ bslice nameOffset nameSize programContent
       progSize = byteStringToWord32 $ bslice progSizeOffset progSizeSize programContent
       instructions = bslice (headerSize + 8) (B.length programContent) programContent
-      offset = fromIntegral $ championNbr * memSize `div` championsNbr
+      offset = fromIntegral $ (championNbr - 1) * memSize `div` championsNbr
       cyclesLeft = B.head instructions
 
       program = newProgram championNbr name offset
       vm' = vm { programs = programs vm ++ [program] }
-  in setMemorys offset (championNbr + 1) instructions vm'
+  in setMemorys offset championNbr instructions vm'
+
+currentProgramIndex vm = currentProgramNbr vm - 1
 
 setCurrentProgram :: Program -> Vm -> Vm
 setCurrentProgram program vm =
-  let championNbr = currentProgramNbr vm
+  let championNbr = currentProgramIndex vm
       programs' = programs vm & ix championNbr .~ program
   in vm { programs = programs' }
 
@@ -119,7 +123,7 @@ setProgramAt program index vm =
   in vm { programs = programs' }
 
 getCurrentProgram :: Vm -> Program
-getCurrentProgram vm = programs vm !! currentProgramNbr vm
+getCurrentProgram vm = programs vm !! currentProgramIndex vm
 
 setCurrentProgramNbr :: Program -> Vm -> Vm
 setCurrentProgramNbr program vm =
@@ -198,6 +202,12 @@ setCurrentProgramCycleLeft :: Int -> Vm -> Vm
 setCurrentProgramCycleLeft cycles vm =
   let program = getCurrentProgram vm
       program' = program { cyclesLeft = cycles }
+  in setCurrentProgram program' vm
+
+setCurrentProgramInstruction :: String -> Vm -> Vm
+setCurrentProgramInstruction instructionName vm =
+  let program = getCurrentProgram vm
+      program' = program { lastInstruction = instructionName }
   in setCurrentProgram program' vm
 
 getParameterValue :: (Int -> Int) -> Parameter -> Int -> Vm -> Word32

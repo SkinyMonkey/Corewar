@@ -27,12 +27,12 @@ indirectMask = 0b11000000 :: Word8
 currentMask  = 0b11000000
 
 -- getParameter based on current OpCode
-getParameter :: Bool -> Word8 -> Get Parameter
+getParameter :: Bool -> Word8 -> Get (Either Parameter ())
 getParameter hasIndex opCode
-  | currentParameter == registerMask = Register <$> getWord8
-  | currentParameter == indirectMask = Indirect <$> getWord16be
-  | currentParameter == directMask   = Direct   <$> (if hasIndex then fromIntegral <$> getWord16be else getWord32be)
-  | otherwise = error $ "Unknown parameter type " ++ show currentParameter -- NOTE: should never happen
+  | currentParameter == registerMask = Left <$> (Register <$> getWord8)
+  | currentParameter == indirectMask = Left <$> (Indirect <$> getWord16be)
+  | currentParameter == directMask   = Left <$> (Direct   <$> (if hasIndex then fromIntegral <$> getWord16be else getWord32be))
+  | otherwise = Right <$> skip 1
   where currentParameter = opCode .&. currentMask
 
 -- FIXME : replace by mapM_
@@ -42,9 +42,11 @@ parseByOpCode hasIndex opCode = do
   empty <- isEmpty
   if empty || opCode == 0
     then return (opCode, [])
-    else do parameter <- getParameter hasIndex opCode
+    else do result <- getParameter hasIndex opCode
             (_, parameters) <- parseByOpCode hasIndex (shiftL opCode 2)
-            return (opCode, parameter:parameters)
+            return $ case result of
+              Left parameter -> (opCode, parameter:parameters)
+              Right _ -> (opCode, parameters)
 
 getParameters hasOpCode hasIndex =
   if hasOpCode 
@@ -60,10 +62,10 @@ getInstruction championsNbr = do
            hasOpCode = instruction `notElem` noOpCodeInstructions
        (opCode, params) <- getParameters hasOpCode hasIndex -- (opCode, params, error)
 
-       let validOpCode = if hasOpCode then opCodeIsValid opCode else True
+       let validOpCode = if hasOpCode then opCodeIsValid (trace' opCode) else True
            validParameters = parametersAreValid instruction championsNbr params
 
-       if validOpCode && validParameters
+       if trace' validOpCode && trace' validParameters
        then do
             let size = getInstructionSize params hasIndex hasOpCode
                 cycles' = nbrCycles (opsbyCode !! (fromIntegral instruction - 1))
