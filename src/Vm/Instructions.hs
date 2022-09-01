@@ -216,7 +216,7 @@ aff [Register registerNbr] vm =
 
 setInstrutionNameWrapper :: Int -> InstructionFn -> [Parameter] -> Vm -> Vm
 setInstrutionNameWrapper index f parameters vm =
-  let instructionName = trace' $ opsNames !! index
+  let instructionName = opsNames !! index
       vm' = setCurrentProgramInstruction instructionName vm
   in f parameters vm'
 

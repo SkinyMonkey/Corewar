@@ -22,10 +22,11 @@ shouldFail f params vm =
 testInstructions =
   describe "Instructions" $ do
    let baseVm = newVm
-       championNbrs = [0, 1]
+       championNbrs = [1, 2]
        championsNbr = length championNbrs
-       vm = foldl (insertTestProgram championsNbr) baseVm championNbrs
+       vm' = foldl (insertTestProgram championsNbr) baseVm championNbrs
        program = head (programs vm)
+       vm = setCurrentProgramNbr program vm'
 
    describe "live" $ do 
     it "set a program as alive" $ do

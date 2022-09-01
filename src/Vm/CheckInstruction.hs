@@ -13,47 +13,40 @@ import Utils
 
 getInstructionSize :: [Parameter] -> Bool -> Bool -> Int
 getInstructionSize params hasIndex hasOpCode =
-  let acc = if hasOpCode then 2 else 1
-  in foldl compute acc params
+  let accumulatedSize = if hasOpCode then 2 else 1
+  in foldl compute accumulatedSize params
   where
     compute :: Int -> Parameter -> Int
-    compute acc el = case el of
-      Register _ -> acc + 1 -- 1 byte, sizeOf word8
-      Indirect _ -> acc + 2 -- 2 bytes, sizeOf word16
-      Direct   _ -> acc + (if hasIndex then 2 else 4) -- ..
+    compute accumulatedSize el = case el of
+      Register _ -> accumulatedSize + 1 -- 1 byte, sizeOf word8
+      Indirect _ -> accumulatedSize + 2 -- 2 bytes, sizeOf word16
+      Direct   _ -> accumulatedSize + (if hasIndex then 2 else 4) -- ..
 
 instructionIsValid instruction = instruction > 0 && fromIntegral instruction < length instructionTable
 
 registerIsValid registerNbr = registerNbr > 0 && fromIntegral registerNbr < regNumber
 
+checkParamAgainstLegalParamSet :: InstructionCode -> Int -> Bool -> (Parameter, [Parameter]) -> Bool
+checkParamAgainstLegalParamSet instruction championsNbr previousParamIsValid (el, legalParameters) =
+   previousParamIsValid &&
+   case el of
+   Register registerNbr -> register `elem` legalParameters && registerIsValid registerNbr
+   Indirect value -> indirect `elem` legalParameters
+   Direct value -> direct `elem` legalParameters
+                && if instruction == 0x01 -- alive
+                   then value > 0 && fromIntegral value < championsNbr
+                   else True
+
 -- one param against the corresponding index in the parameterSet
-checkParamAgainstLegalParamSet :: InstructionCode -> Int -> Bool -> (Parameter, Parameter) -> Bool
-checkParamAgainstLegalParamSet instruction championsNbr previousParamIsValid (el, legalParameter) = case el of
-  Register registerNbr -> previousParamIsValid
-                         && legalParameter == register
-                         && registerIsValid registerNbr
-  Indirect value -> previousParamIsValid && legalParameter == indirect
-  Direct value -> previousParamIsValid
-                 && legalParameter == direct
-                 && if instruction == 0x01 -- alive
-                    then value > 0 && fromIntegral value < championsNbr
-                    else True
+checkParamsAgainstLegalParamSet :: InstructionCode -> Int -> [Parameter] -> Bool
+checkParamsAgainstLegalParamSet instruction championsNbr params =
+  let op = opsbyCode !! (fromIntegral instruction - 1)
+      legalParameters = argsType op
+      legalArgNbr = nbrArgs op
+      checkParamAgainstLegalParamSet' = checkParamAgainstLegalParamSet instruction championsNbr
 
--- all the params against one parameterSet
-checkParamsAgainstLegalParamSets :: InstructionCode -> Int -> [Parameter] -> Bool -> [Parameter] -> Bool
-checkParamsAgainstLegalParamSets instruction championsNbr params foundOneValidSet legalParamSet =
-  if length params /= length legalParamSet
-  then foundOneValidSet
-  else let checkParamAgainstLegalParamSet' = checkParamAgainstLegalParamSet instruction championsNbr
-           toValidate = zip params legalParamSet
-       in foldl checkParamAgainstLegalParamSet' True toValidate || foundOneValidSet
-
--- all the params against all the parameterSets
-parametersAreValid :: InstructionCode -> Int -> [Parameter] -> Bool
-parametersAreValid instruction championsNbr params =
-  let legalParamSets = argsType (opsbyCode !! (fromIntegral instruction - 1))
-      checkParamsAgainstLegalParamSets' = checkParamsAgainstLegalParamSets instruction championsNbr params
-  in foldl checkParamsAgainstLegalParamSets' False legalParamSets
+  in (length params == legalArgNbr) &&
+    (foldl checkParamAgainstLegalParamSet' True $ zip params legalParameters)
 
 -- opCodeIsValid : Apply bitmasks from right to left
 -- As soon as a valid value (>0) is met, a flag is set
@@ -72,6 +65,8 @@ opCodeIsValid opCode =
   where
     --  (Bool, Bool) = (validOpcode, validValueFlag)
     valid :: Word8 ->  (Bool, Bool) -> Word8 -> (Bool, Bool)
-    valid opCode (False, False) mask = if (opCode .&. mask) > 0 then (True, True) else (False, False)
+    valid opCode (False, False) mask = if (opCode .&. mask) > 0
+                                       then (True, True)
+                                       else (False, False)
     valid opCode (True, True)   mask = (opCode .&. mask > 0, True)
     valid opCode (False, True)  _    = (False, True)

@@ -51,6 +51,9 @@ indirect = Indirect 0
 
 -- Param octet codage 
 
+-- argsType == prototype of the function with possible parameters
+-- example sti(register, [register | direct | indirect], [register | direct])
+
 data Op = Op {
   mnemonic :: String,
   nbrArgs :: Int,

@@ -62,10 +62,10 @@ getInstruction championsNbr = do
            hasOpCode = instruction `notElem` noOpCodeInstructions
        (opCode, params) <- getParameters hasOpCode hasIndex -- (opCode, params, error)
 
-       let validOpCode = if hasOpCode then opCodeIsValid (trace' opCode) else True
-           validParameters = parametersAreValid instruction championsNbr params
+       let validOpCode = if hasOpCode then opCodeIsValid opCode else True
+           validParameters = checkParamsAgainstLegalParamSet instruction championsNbr params
 
-       if trace' validOpCode && trace' validParameters
+       if validOpCode && validParameters
        then do
             let size = getInstructionSize params hasIndex hasOpCode
                 cycles' = nbrCycles (opsbyCode !! (fromIntegral instruction - 1))

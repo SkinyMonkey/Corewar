@@ -15,8 +15,9 @@ testVm =
    -- it is placed at 2300 something
    -- so we force the pc to 0
    let programContent = B8.pack $ replicate 20 '\0'
-       vm = setCurrentProgramPc 0 $ insertProgram 1 1 programContent newVm
-       program = head (programs vm)
+       vm' = setCurrentProgramPc 0 $ insertProgram 1 1 programContent newVm
+       program = head (programs vm')
+       vm = setCurrentProgramNbr program vm'
 
    it "w8stoW32 && w32tow8s" $ do
      let w = 10000000

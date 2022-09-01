@@ -10,7 +10,7 @@ import Utils
 import Vm.Vm
 import Vm.UnpackInstruction
 import Vm.Instructions
-import Vm.Ui
+--import Vm.Ui
 
 -- FIXME : import from VM?
 --refreshDelay = 100000
@@ -66,7 +66,7 @@ gameLoop vm index = do
   let vm' = play vm
   putStrLn $ show $ programs vm
 --  if nbrAlive vm > 0 || MEM_CYCLE == 0?
-  if index < 5 -- 10000
+  if index < 50 -- 10000
   then do liftIO $ threadDelay refreshDelay
           gameLoop vm' (index + 1) -- vm
   else return vm'

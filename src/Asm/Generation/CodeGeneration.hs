@@ -1,3 +1,5 @@
+{-# LANGUAGE BinaryLiterals #-}
+
 module Asm.Generation.CodeGeneration where
 
 import qualified Data.ByteString.Lazy as BL
@@ -15,8 +17,7 @@ import Op
 import Asm.Header
 import Asm.ChampionData
 
--- FIXME : DEBUG
-import Debug.Trace
+import Utils
 
 printBinary :: Int -> String
 printBinary value = "0b" ++ (lpad 8 $ showIntAtBase 2 intToDigit value "")
@@ -33,15 +34,15 @@ printBinary value = "0b" ++ (lpad 8 $ showIntAtBase 2 intToDigit value "")
 encodeParameter :: (Int, Word8) -> Parameter -> (Int, Word8)
 encodeParameter (index, opCode) parameter =
  let newValue = case parameter of
-                   Register _ -> 0x01
-                   Direct _ -> 0x02
-                   Indirect _ -> 0x03
+                   Register _ -> 0b00000001
+                   Direct _ -> 0b00000010
+                   Indirect _ -> 0b00000011
  in (index - 2, opCode .|. (shiftL newValue index))
 
 generateOpCode :: [Parameter] -> Word8
 generateOpCode parameters =
   let emptyByte = 0
-      maximumIndex = (sizeOf emptyByte * 8) - 2
+      maximumIndex = 6
       (_, opCode) = foldl encodeParameter (maximumIndex, emptyByte) parameters
   in opCode
 

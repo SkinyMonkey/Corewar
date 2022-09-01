@@ -78,7 +78,7 @@ setMemory offset memory content =
   in B.concat [ memoryBeforeContent, content, memoryAfterContent ]
 
 setGraphicalMemory :: Offset -> Int -> B.ByteString -> B.ByteString -> B.ByteString
-setGraphicalMemory offset championNbr memory content = 
+setGraphicalMemory offset championNbr memory content =
   let graphicInstructions = B.pack $ replicate (B.length content) (fromIntegral championNbr)
   in setMemory offset memory graphicInstructions
 
@@ -106,7 +106,12 @@ insertProgram championsNbr championNbr programContent vm =
       vm' = vm { programs = programs vm ++ [program] }
   in setMemorys offset championNbr instructions vm'
 
+currentProgramIndex :: Vm -> Int
 currentProgramIndex vm = currentProgramNbr vm - 1
+--  let nbr = currentProgramNbr vm
+--  in if nbr > 0
+--     then nbr - 1
+--     else 0
 
 setCurrentProgram :: Program -> Vm -> Vm
 setCurrentProgram program vm =
@@ -128,7 +133,7 @@ getCurrentProgram vm = programs vm !! currentProgramIndex vm
 setCurrentProgramNbr :: Program -> Vm -> Vm
 setCurrentProgramNbr program vm =
   vm { currentProgramNbr = number program }
-  
+
 setCurrentProgramRegister :: RegisterNbr -> RegisterValue -> Vm -> Vm
 setCurrentProgramRegister registerNbr value vm =
   let program = getCurrentProgram vm
